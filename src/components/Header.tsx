@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Globe } from "lucide-react";
+import { Globe, LayoutDashboard } from "lucide-react";
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/constants";
 import { 
   DropdownMenu, 
@@ -13,9 +13,10 @@ import {
 interface HeaderProps {
   language: string;
   setLanguage: (language: string) => void;
+  onDashboardToggle?: () => void;
 }
 
-const Header = ({ language, setLanguage }: HeaderProps) => {
+const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
   const [scrolled, setScrolled] = useState(false);
   
   // Handle scroll effect
@@ -44,6 +45,13 @@ const Header = ({ language, setLanguage }: HeaderProps) => {
       </div>
       
       <div className="flex items-center space-x-4">
+        {onDashboardToggle && (
+          <Button variant="outline" size="sm" onClick={onDashboardToggle} className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Button>
+        )}
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="flex items-center gap-2">
