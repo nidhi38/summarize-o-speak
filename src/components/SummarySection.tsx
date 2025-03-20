@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Download, Headphones, Languages, Brain, BookOpen, ArrowRight, ChevronDown, ChevronUp, Clock, BarChart2, FileCheck, ListChecks } from "lucide-react";
+import { Copy, Check, Download, Headphones, Languages, Brain, BookOpen, ArrowRight, ChevronDown, ChevronUp, Clock, BarChart2, FileCheck, ListChecks, Book } from "lucide-react";
 import { DocumentFile } from "@/lib/types";
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/constants";
 import { useToast } from "@/components/ui/use-toast";
@@ -129,15 +128,41 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
         duration: 0.5,
         staggerChildren: 0.1
       }
+    },
+    exit: { 
+      opacity: 0, 
+      y: -20,
+      transition: { duration: 0.3 }
     }
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 }
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.4 }
+    }
   };
 
-  // Mock data for the detailed view
+  const popUpVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 20 
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      scale: 0.9,
+      transition: { duration: 0.2 }
+    }
+  };
+
   const documentStructure = [
     { title: "Introduction", pageRange: "1-3", wordCount: 750 },
     { title: "Key Concepts", pageRange: "4-12", wordCount: 2200 },
@@ -156,455 +181,556 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
 
   return (
     <motion.section
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      variants={containerVariants}
       className="w-full max-w-4xl mx-auto mt-12 px-4"
     >
-      <Card className="glass hover:shadow-glass-hover transition-all duration-300">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-primary" />
-              <span>Document Summary</span>
-            </CardTitle>
-            <CardDescription className="mt-1">
-              {file.name} • {new Date().toLocaleDateString()}
-            </CardDescription>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCopy}
-              className="relative"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              <span className="sr-only">Copy summary</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDownload}
-            >
-              <Download className="h-4 w-4" />
-              <span className="sr-only">Download summary</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExpandedView(!expandedView)}
-            >
-              {expandedView ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              <span className="sr-only">Toggle view</span>
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {expandedView && (
-            <motion.div 
-              className="pb-6"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <motion.div 
-                  variants={itemVariants}
-                  className="bg-primary/5 rounded-lg p-4 flex items-center gap-3"
-                >
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Book className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total Pages</div>
-                    <div className="text-xl font-semibold">{readingMetrics.totalPages}</div>
-                  </div>
+      <motion.div variants={popUpVariants}>
+        <Card className="glass hover:shadow-glass-hover transition-all duration-300 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <motion.div whileHover={{ x: 3 }} transition={{ duration: 0.2 }}>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <motion.div whileHover={{ rotate: 15 }} transition={{ duration: 0.3 }}>
+                  <FileCheck className="h-5 w-5 text-primary" />
                 </motion.div>
-                <motion.div 
-                  variants={itemVariants}
-                  className="bg-primary/5 rounded-lg p-4 flex items-center gap-3"
-                >
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <ListChecks className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Word Count</div>
-                    <div className="text-xl font-semibold">{readingMetrics.totalWords.toLocaleString()}</div>
-                  </div>
-                </motion.div>
-                <motion.div 
-                  variants={itemVariants}
-                  className="bg-primary/5 rounded-lg p-4 flex items-center gap-3"
-                >
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Time Saved</div>
-                    <div className="text-xl font-semibold">{readingMetrics.timeSaved} min</div>
-                  </div>
-                </motion.div>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-lg font-medium mb-2">Document Structure</h3>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <Accordion type="single" collapsible className="w-full">
-                    {documentStructure.map((section, index) => (
-                      <AccordionItem key={index} value={`section-${index}`}>
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex items-center justify-between w-full pr-4">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{section.title}</span>
-                              <span className="text-xs text-muted-foreground">Pages {section.pageRange}</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">{section.wordCount} words</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="text-sm text-muted-foreground pl-4 border-l-2 border-muted">
-                            <p>This section covers the key points related to {section.title.toLowerCase()}. 
-                            The content is approximately {(section.wordCount / readingMetrics.totalWords * 100).toFixed(1)}% of the total document.</p>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h3 className="text-lg font-medium mb-3">Reading Efficiency</h3>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <div className="flex flex-col sm:flex-row justify-between mb-3 gap-3">
-                    <div className="flex-1 text-center p-3 bg-primary/5 rounded-lg">
-                      <div className="text-sm text-muted-foreground">Full Reading Time</div>
-                      <div className="text-xl font-medium">{readingMetrics.estimatedReadTime} minutes</div>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 sm:rotate-0" />
-                    </div>
-                    <div className="flex-1 text-center p-3 bg-primary/5 rounded-lg">
-                      <div className="text-sm text-muted-foreground">Summary Reading Time</div>
-                      <div className="text-xl font-medium">{readingMetrics.summaryReadTime} minutes</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm">Time Efficiency</span>
-                      <span className="text-sm font-medium">
-                        {Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)} 
-                      className="h-2"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      You're saving {readingMetrics.timeSaved} minutes by reading this summary instead of the full document.
-                    </p>
-                  </div>
-                </div>
-              </div>
+                <span>Document Summary</span>
+              </CardTitle>
+              <CardDescription className="mt-1">
+                {file.name} • {new Date().toLocaleDateString()}
+              </CardDescription>
             </motion.div>
-          )}
-
-          <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-4">
-              <TabsTrigger value="summary">Basic Summary</TabsTrigger>
-              <TabsTrigger value="ai-summary">AI Summary</TabsTrigger>
-              <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
-              <TabsTrigger value="insights">AI Insights</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="summary" className="pt-4">
-              <div className="p-4 rounded-lg bg-muted/50 min-h-[200px]">
-                {file.summary || "Processing summary..."}
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <div className="flex-1 space-y-2">
-                  <label className="text-sm font-medium">Target Language</label>
-                  <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_LANGUAGES.map((language) => (
-                        <SelectItem key={language.code} value={language.code}>
-                          {language.flag} {language.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleTranslate}
-                    className="flex-1 flex items-center gap-2"
-                  >
-                    <Languages className="h-4 w-4" />
-                    Translate
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleTextToSpeech}
-                    className="flex-1 flex items-center gap-2"
-                  >
-                    <Headphones className="h-4 w-4" />
-                    Listen
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
-                  <Button onClick={handleAISummarize} className="w-full flex items-center gap-2">
-                    <Brain className="h-4 w-4" />
-                    Generate AI Summary
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
-                  <Button onClick={handleGenerateFlashcards} variant="outline" className="w-full flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Create Flashcards
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
-                  <Button onClick={handleGenerateInsights} variant="secondary" className="w-full flex items-center gap-2">
-                    <BarChart2 className="h-4 w-4" />
-                    Analyze Content
-                  </Button>
-                </motion.div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="ai-summary" className="pt-4">
-              {aiSummary ? (
-                <motion.div 
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-6"
+            <div className="flex items-center space-x-2">
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopy}
+                  className="relative"
                 >
-                  <motion.div variants={itemVariants}>
-                    <h3 className="text-lg font-medium mb-2">Enhanced Summary</h3>
-                    <div className="p-4 rounded-lg bg-muted/50 border border-muted">
-                      {aiSummary.summary}
-                    </div>
-                  </motion.div>
-                  
-                  <motion.div variants={itemVariants}>
-                    <h3 className="text-lg font-medium mb-2">Key Takeaways</h3>
-                    <ul className="space-y-2">
-                      {aiSummary.keyTakeaways.map((point, index) => (
-                        <motion.li 
-                          key={index} 
-                          variants={itemVariants}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10"
-                        >
-                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs">
-                            {index + 1}
-                          </span>
-                          <span>{point}</span>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                  
-                  <motion.div variants={itemVariants}>
-                    <h3 className="text-lg font-medium mb-2">Main Topics</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {aiSummary.topics.map((topic, index) => (
-                        <motion.span 
-                          key={index} 
-                          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          {topic}
-                        </motion.span>
-                      ))}
-                    </div>
-                  </motion.div>
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span className="sr-only">Copy summary</span>
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDownload}
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only">Download summary</span>
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setExpandedView(!expandedView)}
+                >
+                  {expandedView ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <span className="sr-only">Toggle view</span>
+                </Button>
+              </motion.div>
+            </div>
+          </CardHeader>
 
-                  <motion.div variants={itemVariants} className="pt-4">
-                    <Button onClick={handleTextToSpeech} className="flex items-center gap-2">
-                      <Headphones className="h-4 w-4" />
-                      Listen to AI Summary
-                    </Button>
-                  </motion.div>
-                </motion.div>
-              ) : (
-                <div className="min-h-[300px] flex items-center justify-center">
+          <CardContent className="space-y-4">
+            <AnimatePresence>
+              {expandedView && (
+                <motion.div 
+                  className="pb-6"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <motion.div 
+                      variants={itemVariants}
+                      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
+                      className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
+                    >
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <Book className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Total Pages</div>
+                        <div className="text-xl font-semibold">{readingMetrics.totalPages}</div>
+                      </div>
+                    </motion.div>
+                    <motion.div 
+                      variants={itemVariants}
+                      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
+                      className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
+                    >
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <ListChecks className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Word Count</div>
+                        <div className="text-xl font-semibold">{readingMetrics.totalWords.toLocaleString()}</div>
+                      </div>
+                    </motion.div>
+                    <motion.div 
+                      variants={itemVariants}
+                      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
+                      className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
+                    >
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Time Saved</div>
+                        <div className="text-xl font-semibold">{readingMetrics.timeSaved} min</div>
+                      </div>
+                    </motion.div>
+                  </div>
+
                   <motion.div 
-                    whileHover={{ scale: 1.05 }} 
-                    whileTap={{ scale: 0.95 }}
+                    variants={itemVariants}
+                    className="mb-6"
                   >
-                    <Button onClick={handleAISummarize} className="flex items-center gap-2">
-                      <Brain className="mr-2 h-4 w-4" />
-                      Generate AI Summary
-                    </Button>
-                  </motion.div>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="flashcards" className="pt-4">
-              {flashcards ? (
-                <Flashcards flashcardSet={flashcards} />
-              ) : (
-                <div className="min-h-[300px] flex items-center justify-center">
-                  <motion.div 
-                    whileHover={{ scale: 1.05 }} 
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button onClick={handleGenerateFlashcards} className="flex items-center gap-2">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Generate Flashcards
-                    </Button>
-                  </motion.div>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="insights" className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Content Analysis</CardTitle>
-                      <CardDescription>AI-generated insights about this document</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Reading Level:</span>
-                        <span className="font-medium">College</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Content Complexity:</span>
-                        <span className="font-medium">Advanced (72/100)</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Overall Sentiment:</span>
-                        <span className="font-medium">Neutral</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Word Count:</span>
-                        <span className="font-medium">1,250 words</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Reading Time:</span>
-                        <span className="font-medium">~6 minutes</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Topic Distribution</CardTitle>
-                      <CardDescription>Main subjects covered in the document</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Technology</span>
-                            <span>45%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div className="bg-primary rounded-full h-2" style={{ width: "45%" }}></div>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Innovation</span>
-                            <span>30%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div className="bg-primary rounded-full h-2" style={{ width: "30%" }}></div>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Research</span>
-                            <span>15%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div className="bg-primary rounded-full h-2" style={{ width: "15%" }}></div>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Business</span>
-                            <span>10%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div className="bg-primary rounded-full h-2" style={{ width: "10%" }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="col-span-1 md:col-span-2"
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Related Concepts</CardTitle>
-                      <CardDescription>Key concepts connected to this document</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-3">
-                        {[
-                          "Artificial Intelligence", "Machine Learning", "Neural Networks", 
-                          "Deep Learning", "Natural Language Processing", "Computer Vision",
-                          "Robotics", "Data Science", "Big Data", "Cloud Computing", 
-                          "Internet of Things", "Cybersecurity"
-                        ].map((concept, index) => (
-                          <motion.span 
-                            key={index}
-                            className="px-3 py-2 bg-primary/10 text-primary rounded-lg text-sm"
-                            whileHover={{ scale: 1.05, backgroundColor: "rgba(0,0,0,0.07)" }}
-                          >
-                            {concept}
-                          </motion.span>
+                    <h3 className="text-lg font-medium mb-2">Document Structure</h3>
+                    <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
+                      <Accordion type="single" collapsible className="w-full">
+                        {documentStructure.map((section, index) => (
+                          <AccordionItem key={index} value={`section-${index}`}>
+                            <motion.div whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }} className="rounded-md">
+                              <AccordionTrigger className="hover:no-underline px-3">
+                                <div className="flex items-center justify-between w-full pr-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{section.title}</span>
+                                    <span className="text-xs text-muted-foreground">Pages {section.pageRange}</span>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">{section.wordCount} words</span>
+                                </div>
+                              </AccordionTrigger>
+                            </motion.div>
+                            <AccordionContent className="px-3">
+                              <motion.div 
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                className="text-sm text-muted-foreground pl-4 border-l-2 border-muted"
+                              >
+                                <p>This section covers the key points related to {section.title.toLowerCase()}. 
+                                The content is approximately {(section.wordCount / readingMetrics.totalWords * 100).toFixed(1)}% of the total document.</p>
+                              </motion.div>
+                            </AccordionContent>
+                          </AccordionItem>
                         ))}
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button variant="outline" size="sm" className="ml-auto">
-                        Explore More
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </motion.section>
-  );
-};
+                      </Accordion>
+                    </div>
+                  </motion.div>
 
-export default SummarySection;
+                  <motion.div variants={itemVariants} className="mb-4">
+                    <h3 className="text-lg font-medium mb-3">Reading Efficiency</h3>
+                    <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
+                      <div className="flex flex-col sm:flex-row justify-between mb-3 gap-3">
+                        <motion.div 
+                          whileHover={{ scale: 1.02 }}
+                          className="flex-1 text-center p-3 bg-primary/5 rounded-lg"
+                        >
+                          <div className="text-sm text-muted-foreground">Full Reading Time</div>
+                          <div className="text-xl font-medium">{readingMetrics.estimatedReadTime} minutes</div>
+                        </motion.div>
+                        <div className="flex items-center justify-center">
+                          <motion.div 
+                            animate={{ x: [0, 10, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                          >
+                            <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 sm:rotate-0" />
+                          </motion.div>
+                        </div>
+                        <motion.div 
+                          whileHover={{ scale: 1.02 }}
+                          className="flex-1 text-center p-3 bg-primary/5 rounded-lg"
+                        >
+                          <div className="text-sm text-muted-foreground">Summary Reading Time</div>
+                          <div className="text-xl font-medium">{readingMetrics.summaryReadTime} minutes</div>
+                        </motion.div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm">Time Efficiency</span>
+                          <span className="text-sm font-medium">
+                            {Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%
+                          </span>
+                        </div>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%` }}
+                          transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                          className="h-2 bg-primary rounded-full"
+                        />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          You're saving {readingMetrics.timeSaved} minutes by reading this summary instead of the full document.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full grid grid-cols-4">
+                <TabsTrigger value="summary" className="transition-all duration-300">Basic Summary</TabsTrigger>
+                <TabsTrigger value="ai-summary" className="transition-all duration-300">AI Summary</TabsTrigger>
+                <TabsTrigger value="flashcards" className="transition-all duration-300">Flashcards</TabsTrigger>
+                <TabsTrigger value="insights" className="transition-all duration-300">AI Insights</TabsTrigger>
+              </TabsList>
+              
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <TabsContent value="summary" className="pt-4">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <div className="p-6 rounded-lg glass shadow-glass min-h-[200px]">
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.2, duration: 0.5 }}
+                          className="prose prose-sm max-w-none"
+                        >
+                          {file.summary || "Processing summary..."}
+                        </motion.div>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-sm font-medium">Target Language</label>
+                          <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                            <SelectTrigger className="w-full glass border-0 shadow-glass">
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent className="glass">
+                              {SUPPORTED_LANGUAGES.map((language) => (
+                                <SelectItem key={language.code} value={language.code}>
+                                  {language.flag} {language.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex items-end gap-2">
+                          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                            <Button
+                              variant="outline"
+                              onClick={handleTranslate}
+                              className="flex-1 flex items-center gap-2 glass"
+                            >
+                              <Languages className="h-4 w-4" />
+                              Translate
+                            </Button>
+                          </motion.div>
+                          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                            <Button
+                              variant="secondary"
+                              onClick={handleTextToSpeech}
+                              className="flex-1 flex items-center gap-2"
+                            >
+                              <Headphones className="h-4 w-4" />
+                              Listen
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <motion.div 
+                          whileHover={{ scale: 1.05, y: -5 }} 
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Button onClick={handleAISummarize} className="w-full flex items-center gap-2 h-14 rounded-xl bg-gradient-to-r from-primary to-primary/80">
+                            <Brain className="h-5 w-5" />
+                            <span className="font-medium">Generate AI Summary</span>
+                          </Button>
+                        </motion.div>
+                        <motion.div 
+                          whileHover={{ scale: 1.05, y: -5 }} 
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Button onClick={handleGenerateFlashcards} variant="outline" className="w-full flex items-center gap-2 h-14 rounded-xl glass">
+                            <BookOpen className="h-5 w-5" />
+                            <span className="font-medium">Create Flashcards</span>
+                          </Button>
+                        </motion.div>
+                        <motion.div 
+                          whileHover={{ scale: 1.05, y: -5 }} 
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Button onClick={handleGenerateInsights} variant="secondary" className="w-full flex items-center gap-2 h-14 rounded-xl">
+                            <BarChart2 className="h-5 w-5" />
+                            <span className="font-medium">Analyze Content</span>
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  </TabsContent>
+                  
+                  <TabsContent value="ai-summary" className="pt-4">
+                    {aiSummary ? (
+                      <motion.div 
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-6"
+                      >
+                        <motion.div variants={itemVariants}>
+                          <h3 className="text-lg font-medium mb-2">Enhanced Summary</h3>
+                          <div className="p-6 rounded-lg glass shadow-glass border border-primary/10">
+                            {aiSummary.summary}
+                          </div>
+                        </motion.div>
+                        
+                        <motion.div variants={itemVariants}>
+                          <h3 className="text-lg font-medium mb-2">Key Takeaways</h3>
+                          <ul className="space-y-3">
+                            {aiSummary.keyTakeaways.map((point, index) => (
+                              <motion.li 
+                                key={index} 
+                                variants={itemVariants}
+                                whileHover={{ x: 5 }}
+                                className="flex items-start gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10 shadow-sm transition-all duration-300"
+                              >
+                                <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs mt-0.5">
+                                  {index + 1}
+                                </span>
+                                <span>{point}</span>
+                              </motion.li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                        
+                        <motion.div variants={itemVariants}>
+                          <h3 className="text-lg font-medium mb-2">Main Topics</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {aiSummary.topics.map((topic, index) => (
+                              <motion.span 
+                                key={index} 
+                                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium shadow-sm"
+                                whileHover={{ scale: 1.05, backgroundColor: "rgba(0,0,0,0.04)" }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                {topic}
+                              </motion.span>
+                            ))}
+                          </div>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="pt-4">
+                          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                            <Button onClick={handleTextToSpeech} className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/80 px-6 py-6 h-12 rounded-xl">
+                              <Headphones className="h-4 w-4" />
+                              <span className="font-medium">Listen to AI Summary</span>
+                            </Button>
+                          </motion.div>
+                        </motion.div>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        className="min-h-[300px] flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <motion.div 
+                          whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }} 
+                          whileTap={{ scale: 0.95 }}
+                          className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-transparent text-center"
+                        >
+                          <motion.div 
+                            animate={{ 
+                              scale: [1, 1.1, 1],
+                              rotate: [0, 5, 0, -5, 0]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="inline-block mb-3"
+                          >
+                            <Brain className="h-12 w-12 text-primary/60" />
+                          </motion.div>
+                          <h3 className="text-xl font-medium mb-4">Generate AI Summary</h3>
+                          <p className="text-muted-foreground mb-6 max-w-md">
+                            Use advanced AI to create an enhanced summary with key takeaways and main topics
+                          </p>
+                          <Button onClick={handleAISummarize} className="px-6 bg-gradient-to-r from-primary to-primary/80">
+                            <Brain className="mr-2 h-4 w-4" />
+                            Generate Now
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="flashcards" className="pt-4">
+                    {flashcards ? (
+                      <Flashcards flashcardSet={flashcards} />
+                    ) : (
+                      <motion.div 
+                        className="min-h-[300px] flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <motion.div 
+                          whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }} 
+                          whileTap={{ scale: 0.95 }}
+                          className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-transparent text-center"
+                        >
+                          <motion.div 
+                            animate={{ 
+                              y: [0, -10, 0],
+                            }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="inline-block mb-3"
+                          >
+                            <BookOpen className="h-12 w-12 text-primary/60" />
+                          </motion.div>
+                          <h3 className="text-xl font-medium mb-4">Create Learning Flashcards</h3>
+                          <p className="text-muted-foreground mb-6 max-w-md">
+                            Generate interactive flashcards to help you remember the key concepts from this document
+                          </p>
+                          <Button onClick={handleGenerateFlashcards} className="px-6 bg-gradient-to-r from-primary to-primary/80">
+                            <BookOpen className="mr-2 h-4 w-4" />
+                            Generate Flashcards
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="insights" className="pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.1)" }}
+                        className="transition-all duration-300"
+                      >
+                        <Card className="glass shadow-glass border border-white/10 backdrop-blur-xl overflow-hidden">
+                          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <Brain className="h-5 w-5 text-primary/70" />
+                              Content Analysis
+                            </CardTitle>
+                            <CardDescription>AI-generated insights about this document</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4 pt-6">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Reading Level:</span>
+                              <span className="font-medium">College</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Content Complexity:</span>
+                              <span className="font-medium">Advanced (72/100)</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Overall Sentiment:</span>
+                              <span className="font-medium">Neutral</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Word Count:</span>
+                              <span className="font-medium">1,250 words</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Reading Time:</span>
+                              <span className="font-medium">~6 minutes</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                      
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.1)" }}
+                        className="transition-all duration-300"
+                      >
+                        <Card className="glass shadow-glass border border-white/10 backdrop-blur-xl overflow-hidden">
+                          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <BarChart2 className="h-5 w-5 text-primary/70" />
+                              Topic Distribution
+                            </CardTitle>
+                            <CardDescription>Main subjects covered in the document</CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-6">
+                            <div className="space-y-4">
+                              {[
+                                { topic: "Technology", percentage: 45 },
+                                { topic: "Innovation", percentage: 30 },
+                                { topic: "Research", percentage: 15 },
+                                { topic: "Business", percentage: 10 }
+                              ].map((item, index) => (
+                                <motion.div 
+                                  key={index}
+                                  initial={{ opacity: 0, width: 0 }}
+                                  animate={{ opacity: 1, width: "100%" }}
+                                  transition={{ delay: 0.3 + (index * 0.1), duration: 0.5 }}
+                                >
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>{item.topic}</span>
+                                    <span>{item.percentage}%</span>
+                                  </div>
+                                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                    <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${item.percentage}%` }}
+                                      transition={{ delay: 0.5 + (index * 0.1), duration: 0.7, ease: "easeOut" }}
+                                      className="bg-primary rounded-full h-2"
+                                    />
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.1)" }}
+                        className="col-span-1 md:col-span-2 transition-all duration-300"
+                      >
+                        <Card className="glass shadow-glass border border-white/10 backdrop-blur-xl overflow-hidden">
+                          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <motion.div
+                                animate={{ rotate: [0, 5, 0, -5, 0] }}
+                                transition={{ duration: 5, repeat: Infinity }}
+                              >
+                                <Brain className="h-5 w-5 text-primary/70" />
+                              </motion.div>
+                              Related Concepts
+                            </CardTitle>
+                            <CardDescription>Key concepts connected to this document</CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-6">
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.4, duration: 0.5 }}
+                              className="flex flex-wrap gap-3"
+                            >
+                              {[
+                                "Artificial Intelligence", "Machine Learning", "Neural
