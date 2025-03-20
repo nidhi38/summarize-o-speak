@@ -96,6 +96,47 @@
   .rotateY-180 {
     transform: rotateY(180deg);
   }
+  
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .card-hover:hover {
+    @apply transform -translate-y-1 shadow-xl;
+  }
+  
+  /* Button animations */
+  .btn-bounce {
+    @apply transition-transform duration-200;
+  }
+  
+  .btn-bounce:hover {
+    @apply transform scale-105;
+  }
+  
+  .btn-bounce:active {
+    @apply transform scale-95;
+  }
+  
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent;
+  }
+  
+  /* Fade transition */
+  .fade-in {
+    @apply transition-opacity duration-300 ease-in-out;
+  }
+  
+  /* Progress bar animation */
+  .progress-animate {
+    animation: progress-animation 2s ease-in-out;
+  }
+  
+  @keyframes progress-animation {
+    from { width: 0%; }
+  }
 }
 
 @layer utilities {
@@ -105,6 +146,22 @@
   
   .animate-float {
     animation: float 2s ease-in-out infinite;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-right {
+    animation: slide-right 0.5s ease-out forwards;
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+  
+  .animate-scale {
+    animation: scale 0.3s ease-out forwards;
   }
 }
 
@@ -126,5 +183,47 @@
   }
   100% {
     transform: translateY(0px);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-right {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
 }

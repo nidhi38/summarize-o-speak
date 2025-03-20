@@ -9,6 +9,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { motion } from "framer-motion";
 
 interface HeaderProps {
   language: string;
@@ -33,33 +34,44 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
                           SUPPORTED_LANGUAGES.find(lang => lang.code === DEFAULT_LANGUAGE)!;
 
   return (
-    <header 
+    <motion.header 
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-4 px-6 md:px-12 flex items-center justify-between ${
         scrolled ? 'glass shadow-glass' : 'bg-transparent'
       }`}
     >
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+        <motion.h1 
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+        >
           Summarizer
-        </h1>
+        </motion.h1>
       </div>
       
       <div className="flex items-center space-x-4">
         {onDashboardToggle && (
-          <Button variant="outline" size="sm" onClick={onDashboardToggle} className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button variant="outline" size="sm" onClick={onDashboardToggle} className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+          </motion.div>
         )}
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              <span>
-                {currentLanguage.flag} {currentLanguage.name}
-              </span>
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                <span>
+                  {currentLanguage.flag} {currentLanguage.name}
+                </span>
+              </Button>
+            </motion.div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 glass">
             {SUPPORTED_LANGUAGES.map((lang) => (
@@ -77,7 +89,7 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
+    </motion.header>
   );
 };
 
