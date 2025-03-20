@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Copy, Check, Download, Headphones, Translate } from "lucide-react";
+import { Copy, Check, Download, Headphones, Languages } from "lucide-react";
 import { DocumentFile } from "@/lib/types";
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/constants";
 import { useToast } from "@/components/ui/use-toast";
@@ -130,7 +129,7 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                 onClick={handleTranslate}
                 className="flex-1 flex items-center gap-2"
               >
-                <Translate className="h-4 w-4" />
+                <Languages className="h-4 w-4" />
                 Translate
               </Button>
               <Button
