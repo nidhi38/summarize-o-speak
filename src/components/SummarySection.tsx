@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Download, Headphones, Languages, Brain, BookOpen, ArrowRight, ChevronDown, ChevronUp, Clock, BarChart2, FileCheck, ListChecks, Book } from "lucide-react";
@@ -733,5 +734,38 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                               className="flex flex-wrap gap-3"
                             >
                               {[
-                                "Artificial Intelligence", "Machine Learning", "Neural
-"
+                                "Artificial Intelligence", 
+                                "Machine Learning", 
+                                "Neural Networks",
+                                "Data Science",
+                                "Algorithms",
+                                "Deep Learning",
+                                "NLP",
+                                "Robotics"
+                              ].map((concept, index) => (
+                                <motion.span
+                                  key={index}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className="px-3 py-1.5 bg-primary/10 rounded-full text-sm"
+                                >
+                                  {concept}
+                                </motion.span>
+                              ))}
+                            </motion.div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    </div>
+                  </TabsContent>
+                </motion.div>
+              </AnimatePresence>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.section>
+  );
+};
+
+export default SummarySection;
