@@ -734,3 +734,4 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                             >
                               {[
                                 "Artificial Intelligence", "Machine Learning", "Neural
+"
