@@ -44,7 +44,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
-  const { translateText, textToSpeech } = useAIService();
+  const { translateText: aiTranslateText, textToSpeech } = useAIService();
   
   useEffect(() => {
     // Load previously stored conversions from localStorage
@@ -291,7 +291,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     setIsPlaying(false);
   };
 
-  const translateText = async () => {
+  const handleTranslateText = async () => {
     if (!text.trim()) {
       toast({
         title: "Error",
@@ -312,7 +312,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       });
 
       // Use the AIService translation method
-      const translationResponse = await translateText(text, selectedLanguage);
+      const translationResponse = await aiTranslateText(text, selectedLanguage);
       
       if (translationResponse) {
         const translatedText = translationResponse.translatedText;
@@ -421,7 +421,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               </Button>
 
               <Button
-                onClick={translateText}
+                onClick={handleTranslateText}
                 variant="secondary"
                 className="flex-1 flex items-center justify-center gap-2"
                 disabled={!text.trim() || isTranslating}

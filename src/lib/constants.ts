@@ -22,7 +22,6 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: "ko", name: "Korean", flag: "🇰🇷" },
   { code: "ar", name: "Arabic", flag: "🇸🇦" },
   { code: "hi", name: "Hindi", flag: "🇮🇳" },
-  { code: "hi-IN", name: "Hindi (India)", flag: "🇮🇳" },
 ];
 
 export const DEFAULT_LANGUAGE = "en";
