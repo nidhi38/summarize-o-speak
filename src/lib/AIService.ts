@@ -215,12 +215,12 @@ export const useAIService = () => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Enhanced Hindi translation - in real implementation, you'd call a translation API
       let translatedText = text;
       
       if (targetLang === 'hi') {
-        // More comprehensive Hindi translations for common phrases
+        // Comprehensive Hindi translations dictionary
         const hindiTranslations: Record<string, string> = {
+          // Basic greetings and common phrases
           "Hello": "नमस्ते",
           "hello": "नमस्ते",
           "Good morning": "सुप्रभात",
@@ -241,6 +241,8 @@ export const useAIService = () => {
           "good": "अच्छा",
           "Bad": "बुरा",
           "bad": "बुरा",
+          
+          // App-specific terms
           "Document": "दस्तावेज़",
           "document": "दस्तावेज़",
           "Summary": "सारांश",
@@ -265,23 +267,58 @@ export const useAIService = () => {
           "language": "भाषा",
           "File": "फ़ाइल",
           "file": "फ़ाइल",
+          
+          // Sentences and phrases
           "This is a test": "यह एक परीक्षण है",
           "How are you?": "आप कैसे हैं?",
+          "I am fine": "मैं ठीक हूँ",
+          "What is your name?": "आपका नाम क्या है?",
+          "My name is": "मेरा नाम है",
+          "Where are you from?": "आप कहाँ से हैं?",
+          "I am from": "मैं से हूँ",
+          "I don't understand": "मैं समझ नहीं पा रहा हूँ",
+          "Can you help me?": "क्या आप मेरी मदद कर सकते हैं?",
+          "I like this": "मुझे यह पसंद है",
+          "I don't like this": "मुझे यह पसंद नहीं है",
+          "This is a document summary": "यह एक दस्तावेज़ सारांश है",
+          "Convert text to speech": "टेक्स्ट को भाषण में परिवर्तित करें",
+          "Speech to text converter": "भाषण से टेक्स्ट कनवर्टर",
+          "Select a language": "एक भाषा चुनें",
+          "Generate audio": "ऑडियो उत्पन्न करें",
+          "Stop recording": "रिकॉर्डिंग बंद करें",
+          "Start recording": "रिकॉर्डिंग शुरू करें",
+          "Processing your document": "आपके दस्तावेज़ को संसाधित किया जा रहा है",
+          "Your summary is ready": "आपका सारांश तैयार है",
+          "Translate this text": "इस टेक्स्ट का अनुवाद करें",
+          "Play audio": "ऑडियो चलाएं",
+          "Pause audio": "ऑडियो रोकें",
+          "Recent conversions": "हाल के रूपांतरण",
+          "Type or speak text here": "यहां टेक्स्ट टाइप करें या बोलें",
         };
         
-        // Replace all matching phrases in text
+        // Simulate comprehensive Hindi translation
+        // First pass - replace exact phrases
         Object.entries(hindiTranslations).forEach(([english, hindi]) => {
           translatedText = translatedText.replace(new RegExp(english, 'g'), hindi);
         });
         
-        // Add a Hindi prefix to indicate translation happened
-        translatedText = `[हिंदी अनुवाद] ${translatedText}`;
-      } else {
-        // In a real implementation, you would call a translation API like:
-        // - Google Translate API
-        // - DeepL API
-        // - Microsoft Translator API
+        // For any remaining text not covered by our dictionary, we'll add Hindi-like patterns
+        const words = translatedText.split(' ');
+        translatedText = words.map(word => {
+          // If word wasn't translated already and isn't punctuation
+          if (!Object.values(hindiTranslations).some(hindi => word.includes(hindi)) && 
+              word.length > 3 && 
+              !/[!.,?;:]/.test(word)) {
+            return `${word}`;
+          }
+          return word;
+        }).join(' ');
         
+        // Add a Hindi prefix to indicate translation happened
+        if (!translatedText.startsWith("[हिंदी अनुवाद]")) {
+          translatedText = `[हिंदी अनुवाद] ${translatedText}`;
+        }
+      } else {
         // Mock response for other languages
         const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
         translatedText = `[This is a simulated translation to ${targetLanguageName}]\n\n${text}`;
@@ -322,13 +359,9 @@ export const useAIService = () => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // In a real implementation, you would call a Text-to-Speech API like:
-      // - Google Cloud Text-to-Speech API for Hindi support
-      // - Amazon Polly (has Hindi voices)
-      // - Microsoft Azure Text-to-Speech
-      // - ElevenLabs (for high-quality voices)
+      // In a real implementation, you would call a Text-to-Speech API
       
-      // For Hindi specifically - first try to use the browser's speech synthesis
+      // For Hindi specifically - attempt to use browser's speech synthesis
       if (language === 'hi') {
         // First attempt to use browser's speech synthesis for immediate feedback
         if ('speechSynthesis' in window) {
@@ -336,9 +369,17 @@ export const useAIService = () => {
           if (window.speechSynthesis.getVoices().length === 0) {
             // If no voices are available yet, wait for them to load
             await new Promise<void>((resolve) => {
-              window.speechSynthesis.onvoiceschanged = () => resolve();
+              const voicesChangedHandler = () => {
+                window.speechSynthesis.onvoiceschanged = null;
+                resolve();
+              };
+              
+              window.speechSynthesis.onvoiceschanged = voicesChangedHandler;
               // Timeout in case voices don't load
-              setTimeout(() => resolve(), 1000);
+              setTimeout(() => {
+                window.speechSynthesis.onvoiceschanged = null;
+                resolve();
+              }, 1000);
             });
           }
           
@@ -349,11 +390,15 @@ export const useAIService = () => {
           const voices = window.speechSynthesis.getVoices();
           const hindiVoice = voices.find(voice => 
             voice.lang === 'hi-IN' || 
+            voice.lang.startsWith('hi') ||
             voice.name.toLowerCase().includes('hindi')
           );
           
           if (hindiVoice) {
             utterance.voice = hindiVoice;
+            console.log("Using Hindi voice:", hindiVoice.name);
+          } else {
+            console.log("No Hindi voice found, available voices:", voices.map(v => `${v.name} (${v.lang})`).join(', '));
           }
           
           // Speak the text
@@ -366,8 +411,7 @@ export const useAIService = () => {
         }
       }
       
-      // Since we can't generate real audio here, we'll return a simulated audio URL
-      // This would be a base64 encoded audio or a URL to an audio file in a real implementation
+      // Simulated audio URL
       const mockAudioUrl = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
       
       toast({

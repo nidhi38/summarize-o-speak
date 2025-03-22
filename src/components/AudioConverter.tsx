@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { AudioConversion } from "@/lib/types";
-import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/constants";
+import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, HINDI_TEXT_SAMPLES } from "@/lib/constants";
 import { 
   Select,
   SelectContent,
@@ -41,6 +41,8 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   const [isMuted, setIsMuted] = useState(false);
   const [previousConversions, setPreviousConversions] = useState<AudioConversion[]>([]);
   const [recognition, setRecognition] = useState<any>(null);
+  const [voicesList, setVoicesList] = useState<SpeechSynthesisVoice[]>([]);
+  const [hindiVoiceFound, setHindiVoiceFound] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
@@ -58,6 +60,9 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       }
     }
 
+    // Load available voices for speech synthesis
+    loadVoices();
+
     // Set up speech recognition if available
     const windowWithSpeech = window as WindowWithSpeechRecognition;
     if (windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition) {
@@ -71,6 +76,34 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       }
     };
   }, []);
+
+  const loadVoices = () => {
+    if ('speechSynthesis' in window) {
+      // If voices are already loaded
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setVoicesList(voices);
+        const hindiVoice = findHindiVoice(voices);
+        setHindiVoiceFound(!!hindiVoice);
+      } else {
+        // Wait for voices to be loaded
+        window.speechSynthesis.onvoiceschanged = () => {
+          const updatedVoices = window.speechSynthesis.getVoices();
+          setVoicesList(updatedVoices);
+          const hindiVoice = findHindiVoice(updatedVoices);
+          setHindiVoiceFound(!!hindiVoice);
+        };
+      }
+    }
+  };
+
+  const findHindiVoice = (voices: SpeechSynthesisVoice[]) => {
+    return voices.find(voice => 
+      voice.lang === 'hi-IN' || 
+      voice.lang.startsWith('hi') ||
+      voice.name.toLowerCase().includes('hindi')
+    );
+  };
 
   // Set up speech recognition with the correct language setting
   const setupSpeechRecognition = () => {
@@ -138,9 +171,13 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         setIsRecording(true);
         
         const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
+        const message = selectedLanguage === 'hi' ? 
+          "माइक्रोफ़ोन में स्पष्ट रूप से बोलें" : 
+          `Speak clearly into your microphone in ${languageName}`;
+        
         toast({
-          title: "Recording started",
-          description: `Speak clearly into your microphone in ${languageName}`,
+          title: selectedLanguage === 'hi' ? "रिकॉर्डिंग शुरू हुई" : "Recording started",
+          description: message,
         });
       } else {
         throw new Error("Speech recognition not available");
@@ -162,17 +199,25 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     }
     setIsRecording(false);
     
+    const message = selectedLanguage === 'hi' ? 
+      "भाषण को सफलतापूर्वक टेक्स्ट में परिवर्तित किया गया" : 
+      "Speech converted to text successfully";
+    
     toast({
-      title: "Recording stopped",
-      description: "Speech converted to text successfully",
+      title: selectedLanguage === 'hi' ? "रिकॉर्डिंग रुकी" : "Recording stopped",
+      description: message,
     });
   };
   
   const generateAudio = async () => {
     if (!text.trim()) {
+      const message = selectedLanguage === 'hi' ? 
+        "कृपया भाषण में परिवर्तित करने के लिए कुछ टेक्स्ट दर्ज करें" : 
+        "Please enter some text to convert to speech";
+      
       toast({
         title: "Error",
-        description: "Please enter some text to convert to speech",
+        description: message,
         variant: "destructive",
       });
       return;
@@ -183,9 +228,13 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     try {
       const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
       
+      const message = selectedLanguage === 'hi' ? 
+        "टेक्स्ट को हिंदी भाषण में परिवर्तित किया जा रहा है..." : 
+        `Converting text to speech in ${languageName}...`;
+      
       toast({
-        title: "Generating audio",
-        description: `Converting text to speech in ${languageName}...`,
+        title: selectedLanguage === 'hi' ? "ऑडियो उत्पन्न हो रहा है" : "Generating audio",
+        description: message,
       });
 
       // Use the textToSpeech service from AIService
@@ -221,9 +270,13 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         // Send to parent component
         onSaveAudioConversion(newConversion);
         
+        const successMessage = selectedLanguage === 'hi' ? 
+          "टेक्स्ट को सफलतापूर्वक भाषण में परिवर्तित किया गया है" : 
+          "Text has been converted to speech successfully";
+        
         toast({
-          title: "Audio generated",
-          description: "Text has been converted to speech successfully",
+          title: selectedLanguage === 'hi' ? "ऑडियो उत्पन्न हुआ" : "Audio generated",
+          description: successMessage,
         });
 
         // Also use speech synthesis for immediate feedback
@@ -231,9 +284,13 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       }
     } catch (error) {
       console.error("Error generating audio:", error);
+      const errorMessage = selectedLanguage === 'hi' ? 
+        "ऑडियो उत्पन्न करने में विफल। कृपया पुनः प्रयास करें।" : 
+        "Failed to generate audio. Please try again.";
+      
       toast({
         title: "Error",
-        description: "Failed to generate audio. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -323,9 +380,13 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
 
   const handleTranslateText = async () => {
     if (!text.trim()) {
+      const message = selectedLanguage === 'hi' ? 
+        "कृपया अनुवाद के लिए कुछ टेक्स्ट दर्ज करें" : 
+        "Please enter some text to translate";
+      
       toast({
         title: "Error",
-        description: "Please enter some text to translate",
+        description: message,
         variant: "destructive",
       });
       return;
@@ -336,9 +397,13 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     try {
       const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
       
+      const message = selectedLanguage === 'hi' ? 
+        "टेक्स्ट को हिंदी में अनुवाद किया जा रहा है..." : 
+        `Translating text to ${targetLanguageName}...`;
+      
       toast({
-        title: "Translating",
-        description: `Translating text to ${targetLanguageName}...`,
+        title: selectedLanguage === 'hi' ? "अनुवाद हो रहा है" : "Translating",
+        description: message,
       });
 
       // Use the AIService translation method
@@ -348,16 +413,25 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         const translatedText = translationResponse.translatedText;
         setText(translatedText);
         
+        const successMessage = selectedLanguage === 'hi' ? 
+          "आपके टेक्स्ट का हिंदी में सफलतापूर्वक अनुवाद किया गया है!" : 
+          `Your text has been translated to ${targetLanguageName} successfully!`;
+        
         toast({
-          title: "Translation complete",
-          description: `Your text has been translated to ${targetLanguageName} successfully!`,
+          title: selectedLanguage === 'hi' ? "अनुवाद पूरा हुआ" : "Translation complete",
+          description: successMessage,
         });
       }
     } catch (error) {
       console.error("Error translating text:", error);
+      
+      const errorMessage = selectedLanguage === 'hi' ? 
+        "टेक्स्ट का अनुवाद करने में विफल। कृपया पुनः प्रयास करें।" : 
+        "Failed to translate text. Please try again.";
+      
       toast({
         title: "Translation Error",
-        description: "Failed to translate text. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -380,6 +454,40 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       audioRef.current.volume = newVolume;
     }
   };
+
+  const getButtonLabel = (action: string) => {
+    if (selectedLanguage === 'hi') {
+      switch(action) {
+        case 'record': return isRecording ? "रिकॉर्डिंग रोकें" : "भाषण रिकॉर्ड करें";
+        case 'generate': return isGeneratingAudio ? "उत्पन्न हो रहा है..." : "ऑडियो उत्पन्न करें";
+        case 'translate': return isTranslating ? "अनुवाद हो रहा है..." : "अनुवाद करें";
+        default: return action;
+      }
+    }
+    
+    switch(action) {
+      case 'record': return isRecording ? "Stop Recording" : "Record Speech";
+      case 'generate': return isGeneratingAudio ? "Generating..." : "Generate Audio";
+      case 'translate': return isTranslating ? "Translating..." : "Translate";
+      default: return action;
+    }
+  };
+
+  const getCardTitle = () => {
+    return selectedLanguage === 'hi' ? "भाषण कनवर्टर" : "Speech Converter";
+  };
+
+  const getTextareaPlaceholder = () => {
+    return selectedLanguage === 'hi' ? "यहां टेक्स्ट टाइप करें या बोलें..." : "Type or speak text here...";
+  };
+
+  const getLanguageLabel = () => {
+    return selectedLanguage === 'hi' ? "भाषा" : "Language";
+  };
+
+  const getRecentConversionsLabel = () => {
+    return selectedLanguage === 'hi' ? "हाल के रूपांतरण" : "Recent Conversions";
+  };
   
   return (
     <section className="w-full max-w-3xl mx-auto mt-12 px-4 mb-20">
@@ -388,16 +496,24 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="glass hover:shadow-glass-hover transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="text-2xl">Speech Converter</CardTitle>
+        <Card className="glass hover:shadow-glass-hover transition-all duration-300 overflow-hidden border border-primary/10">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <motion.div
+                animate={{ rotate: [0, 5, 0, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Languages className="h-5 w-5 text-primary" />
+              </motion.div>
+              {getCardTitle()}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 p-6">
             <div className="flex flex-col space-y-2">
-              <label className="text-sm font-medium">Language</label>
+              <label className="text-sm font-medium">{getLanguageLabel()}</label>
               <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select language" />
+                <SelectTrigger className="w-full glass border-primary/10">
+                  <SelectValue placeholder={selectedLanguage === 'hi' ? "भाषा चुनें" : "Select language"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   {SUPPORTED_LANGUAGES.map((lang) => (
@@ -407,30 +523,39 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                   ))}
                 </SelectContent>
               </Select>
+              
+              {selectedLanguage === 'hi' && !hindiVoiceFound && (
+                <div className="text-xs text-amber-500 italic mt-1">
+                  हिंदी आवाज़ नहीं मिली। सर्वोत्तम अनुभव के लिए, कृपया एक हिंदी आवाज़ वाला ब्राउज़र इस्तेमाल करें।
+                  <br />
+                  (Hindi voice not found. For best experience, please use a browser with Hindi voice support.)
+                </div>
+              )}
             </div>
             
             <Textarea
-              placeholder="Type or speak text here..."
-              className="min-h-[150px] resize-y"
+              placeholder={getTextareaPlaceholder()}
+              className="min-h-[150px] resize-y glass border-primary/10 placeholder:text-muted-foreground/50"
               value={text}
               onChange={(e) => setText(e.target.value)}
+              dir={selectedLanguage === 'hi' || selectedLanguage === 'ar' ? 'auto' : 'ltr'}
             />
             
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 variant={isRecording ? "destructive" : "outline"}
-                className="flex-1 flex items-center justify-center gap-2"
+                className="flex-1 flex items-center justify-center gap-2 border-primary/20 hover:bg-primary/5"
                 onClick={toggleRecording}
               >
                 {isRecording ? (
                   <>
                     <Square className="h-4 w-4" />
-                    Stop Recording
+                    {getButtonLabel('record')}
                   </>
                 ) : (
                   <>
                     <Mic className="h-4 w-4" />
-                    Record Speech
+                    {getButtonLabel('record')}
                   </>
                 )}
               </Button>
@@ -438,15 +563,15 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               <Button
                 onClick={generateAudio}
                 disabled={!text.trim() || isGeneratingAudio}
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-primary to-primary/80"
               >
                 {isGeneratingAudio ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Generating...
+                    {getButtonLabel('generate')}
                   </div>
                 ) : (
-                  "Generate Audio"
+                  getButtonLabel('generate')
                 )}
               </Button>
 
@@ -458,20 +583,24 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               >
                 {isTranslating ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Translating...
+                    <div className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+                    {getButtonLabel('translate')}
                   </div>
                 ) : (
                   <>
                     <Languages className="h-4 w-4" />
-                    Translate
+                    {getButtonLabel('translate')}
                   </>
                 )}
               </Button>
             </div>
             
             {audioUrl && (
-              <div className="mt-4 p-4 rounded-lg bg-muted/50 flex flex-wrap items-center gap-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-4 rounded-lg glass border border-primary/10 flex flex-wrap items-center gap-4"
+              >
                 <Button
                   variant="ghost"
                   size="icon"
@@ -519,12 +648,12 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                   }}
                   className="hidden"
                 />
-              </div>
+              </motion.div>
             )}
 
             {previousConversions.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-lg font-medium mb-3">Recent Conversions</h3>
+                <h3 className="text-lg font-medium mb-3">{getRecentConversionsLabel()}</h3>
                 <div className="space-y-3">
                   {previousConversions.map((conversion) => (
                     <motion.div
@@ -532,10 +661,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       whileHover={{ scale: 1.02 }}
-                      className="p-3 rounded-lg bg-muted/30 backdrop-blur-sm"
+                      className="p-3 rounded-lg glass border border-primary/5 backdrop-blur-sm"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex-1 truncate text-sm">
+                        <div className="flex-1 truncate text-sm" dir={conversion.language === 'hi' || conversion.language === 'ar' ? 'auto' : 'ltr'}>
                           {conversion.text.substring(0, 60)}
                           {conversion.text.length > 60 ? '...' : ''}
                         </div>

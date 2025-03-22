@@ -240,7 +240,7 @@ const Index = () => {
                     transition={{ duration: 0.5 }}
                     className="text-3xl font-bold"
                   >
-                    Audio Conversion
+                    {language === 'hi' ? 'ऑडियो रूपांतरण' : 'Audio Conversion'}
                   </motion.h2>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
@@ -248,7 +248,9 @@ const Index = () => {
                     transition={{ duration: 0.5, delay: 0.1 }}
                     className="text-muted-foreground mt-2"
                   >
-                    Convert between text and speech in multiple languages
+                    {language === 'hi' 
+                      ? 'कई भाषाओं में टेक्स्ट और भाषण के बीच रूपांतरण करें' 
+                      : 'Convert between text and speech in multiple languages'}
                   </motion.p>
                 </div>
                 
