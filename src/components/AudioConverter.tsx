@@ -69,13 +69,19 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       setupSpeechRecognition();
     }
 
+    // Update language when the prop changes
+    setSelectedLanguage(language || DEFAULT_LANGUAGE);
+
     // Clean up on unmount
     return () => {
       if (recognition) {
         recognition.stop();
       }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     };
-  }, []);
+  }, [language]);
 
   const loadVoices = () => {
     if ('speechSynthesis' in window) {
@@ -85,6 +91,8 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         setVoicesList(voices);
         const hindiVoice = findHindiVoice(voices);
         setHindiVoiceFound(!!hindiVoice);
+        console.log("Loaded voices:", voices.map(v => `${v.name} (${v.lang})`).join(', '));
+        console.log("Hindi voice found:", hindiVoice ? hindiVoice.name : "None");
       } else {
         // Wait for voices to be loaded
         window.speechSynthesis.onvoiceschanged = () => {
@@ -92,6 +100,8 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
           setVoicesList(updatedVoices);
           const hindiVoice = findHindiVoice(updatedVoices);
           setHindiVoiceFound(!!hindiVoice);
+          console.log("Updated voices:", updatedVoices.map(v => `${v.name} (${v.lang})`).join(', '));
+          console.log("Hindi voice found:", hindiVoice ? hindiVoice.name : "None");
         };
       }
     }
@@ -237,8 +247,20 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         description: message,
       });
 
+      // For Hindi text, check if it needs translation first
+      let textToConvert = text;
+      if (selectedLanguage === 'hi' && !/[\u0900-\u097F]/.test(text)) {
+        // Text doesn't contain Hindi characters, so translate it first
+        console.log("Text doesn't contain Hindi characters, translating first");
+        const translationResponse = await aiTranslateText(text, 'hi');
+        if (translationResponse) {
+          textToConvert = translationResponse.translatedText;
+          console.log("Translated text:", textToConvert);
+        }
+      }
+
       // Use the textToSpeech service from AIService
-      const generatedAudioUrl = await textToSpeech(text, selectedLanguage);
+      const generatedAudioUrl = await textToSpeech(textToConvert, selectedLanguage);
       
       if (generatedAudioUrl) {
         setAudioUrl(generatedAudioUrl);
@@ -253,7 +275,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         // Create and save the audio conversion
         const newConversion: AudioConversion = {
           id: crypto.randomUUID(),
-          text,
+          text: textToConvert,
           audioUrl: generatedAudioUrl,
           isGenerating: false,
           language: selectedLanguage,
@@ -280,7 +302,12 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         });
 
         // Also use speech synthesis for immediate feedback
-        speakText(text, selectedLanguage);
+        if (selectedLanguage === 'hi') {
+          // Text is already in Hindi, use it directly
+          speakText(textToConvert, selectedLanguage);
+        } else {
+          speakText(text, selectedLanguage);
+        }
       }
     } catch (error) {
       console.error("Error generating audio:", error);
@@ -301,6 +328,9 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   // Function to use Speech Synthesis API for speaking text
   const speakText = (textToSpeak: string, language: string) => {
     if ('speechSynthesis' in window) {
+      // Cancel any previous speech
+      window.speechSynthesis.cancel();
+      
       // For Hindi, make sure we're using the correct language code
       const langCode = language === 'hi' ? 'hi-IN' : language;
       
@@ -311,7 +341,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       // Make sure the speech synthesis has loaded voices
       let voices = window.speechSynthesis.getVoices();
       if (voices.length === 0) {
-        // If voices haven't loaded yet, wait a bit and try again
+        // If voices haven't loaded yet, wait and retry
         setTimeout(() => {
           voices = window.speechSynthesis.getVoices();
           setVoiceAndSpeak(utterance, voices, langCode);
@@ -344,6 +374,9 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       
       if (hindiVoice) {
         preferredVoice = hindiVoice;
+        console.log("Using Hindi voice for speech:", hindiVoice.name);
+      } else {
+        console.log("No Hindi voice found, using default voice");
       }
     }
     
@@ -683,6 +716,11 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                                   audioRef.current.src = conversion.audioUrl || '';
                                   audioRef.current.play();
                                   setIsPlaying(true);
+                                }
+                                
+                                // Also try using speech synthesis for immediate feedback
+                                if (conversion.language === 'hi') {
+                                  speakText(conversion.text, conversion.language);
                                 }
                               }}
                             >

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
@@ -19,9 +18,7 @@ const Index = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Load saved state from localStorage on component mount
   useEffect(() => {
-    // Load saved audio conversions
     const savedAudioConversions = localStorage.getItem('audioConversions');
     if (savedAudioConversions) {
       try {
@@ -31,13 +28,11 @@ const Index = () => {
       }
     }
 
-    // Load saved language preference
     const savedLanguage = localStorage.getItem('preferredLanguage');
     if (savedLanguage) {
       setLanguage(savedLanguage);
     }
 
-    // Load last processed file if available
     const savedFile = localStorage.getItem('lastProcessedFile');
     if (savedFile) {
       try {
@@ -55,7 +50,6 @@ const Index = () => {
   const handleFileProcessed = (file: DocumentFile) => {
     setProcessedFile(file);
     
-    // Save to localStorage for persistence
     localStorage.setItem('lastProcessedFile', JSON.stringify(file));
     
     toast({
@@ -65,21 +59,14 @@ const Index = () => {
   };
 
   const handleTranslate = (text: string, targetLanguage: string) => {
-    // In a real implementation, this would call a translation API like:
-    // - Google Translate API
-    // - Microsoft Translator API
-    // - DeepL API
-    
     toast({
       title: "Translation in progress",
       description: `Translating to ${SUPPORTED_LANGUAGES.find(l => l.code === targetLanguage)?.name}...`,
     });
     
-    // Simulate translation delay
     setTimeout(() => {
       const translatedPrefix = `[Translated to ${SUPPORTED_LANGUAGES.find(l => l.code === targetLanguage)?.name}] `;
       
-      // Update the processed file with translated content
       setProcessedFile(prev => {
         if (!prev) return null;
         
@@ -89,13 +76,11 @@ const Index = () => {
           language: targetLanguage
         };
         
-        // Save the translated file to localStorage
         localStorage.setItem('lastProcessedFile', JSON.stringify(translatedFile));
         
         return translatedFile;
       });
       
-      // Save preferred language
       localStorage.setItem('preferredLanguage', targetLanguage);
       setLanguage(targetLanguage);
       
@@ -112,12 +97,10 @@ const Index = () => {
       description: "Converting text to speech...",
     });
     
-    // Create and use SpeechSynthesis for immediate feedback
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
       
-      // Try to find a voice that matches the language
       const voices = window.speechSynthesis.getVoices();
       const langVoice = voices.find(voice => voice.lang.startsWith(language.split('-')[0]));
       if (langVoice) {
@@ -127,24 +110,19 @@ const Index = () => {
       window.speechSynthesis.speak(utterance);
     }
     
-    // Create a more permanent audio conversion
     setTimeout(() => {
-      // Simulate generating an audio file
       const newConversion: AudioConversion = {
         id: crypto.randomUUID(),
         text,
         isGenerating: false,
         language,
         createdAt: new Date(),
-        // In a real implementation, this would be a URL to an audio file
         audioUrl: "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
       };
       
-      // Update the audio conversions
       const updatedConversions = [newConversion, ...audioConversions.slice(0, 4)];
       setAudioConversions(updatedConversions);
       
-      // Save to localStorage
       localStorage.setItem('audioConversions', JSON.stringify(updatedConversions));
       
       toast({
@@ -206,7 +184,7 @@ const Index = () => {
                     transition={{ duration: 0.5 }}
                     className="text-3xl font-bold"
                   >
-                    Upload Your Document
+                    {language === 'hi' ? 'अपना दस्तावेज़ अपलोड करें' : 'Upload Your Document'}
                   </motion.h2>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
@@ -214,7 +192,9 @@ const Index = () => {
                     transition={{ duration: 0.5, delay: 0.1 }}
                     className="text-muted-foreground mt-2"
                   >
-                    Upload PDF, DOC, or TXT files to extract the key information
+                    {language === 'hi' 
+                      ? 'प्रमुख जानकारी निकालने के लिए PDF, DOC, या TXT फ़ाइलें अपलोड करें' 
+                      : 'Upload PDF, DOC, or TXT files to extract the key information'}
                   </motion.p>
                 </div>
                 

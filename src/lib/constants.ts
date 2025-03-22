@@ -46,5 +46,18 @@ export const HINDI_TEXT_SAMPLES = {
   record: "रिकॉर्ड",
   recording: "रिकॉर्डिंग",
   recentConversions: "हाल के रूपांतरण",
-  selectLanguage: "भाषा चुनें"
+  selectLanguage: "भाषा चुनें",
+  generateAudio: "ऑडियो उत्पन्न करें",
+  stopRecording: "रिकॉर्डिंग रोकें",
+  recordSpeech: "भाषण रिकॉर्ड करें", 
+  translating: "अनुवाद हो रहा है...",
+  translationComplete: "अनुवाद पूरा हुआ",
+  audioGenerated: "ऑडियो उत्पन्न हुआ",
+  playAudio: "ऑडियो चलाएं",
+  pauseAudio: "ऑडियो रोकें",
+  typeOrSpeak: "यहां टाइप करें या बोलें",
+  errorMessage: "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
+  noHindiVoice: "हिंदी आवाज़ नहीं मिली। कृपया एक हिंदी आवाज़ वाला ब्राउज़र इस्तेमाल करें।",
+  hindiTranslationComplete: "हिंदी अनुवाद पूरा हुआ",
+  hindiSpeechComplete: "हिंदी वाणी रूपांतरण पूरा हुआ"
 };

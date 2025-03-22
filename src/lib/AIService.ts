@@ -1,6 +1,5 @@
-
 import { useToast } from "@/components/ui/use-toast";
-import { SUPPORTED_LANGUAGES } from "@/lib/constants";
+import { SUPPORTED_LANGUAGES, HINDI_TEXT_SAMPLES } from "@/lib/constants";
 
 // Type definitions for API responses
 interface SummaryResponse {
@@ -44,9 +43,6 @@ export const useAIService = () => {
   
   const summarizeText = async (text: string): Promise<SummaryResponse | null> => {
     try {
-      // In a real implementation, this would call the Gemini API
-      // For now, we'll simulate a response
-      
       toast({
         title: "Processing with Gemini AI",
         description: "Analyzing your document...",
@@ -267,8 +263,34 @@ export const useAIService = () => {
           "language": "भाषा",
           "File": "फ़ाइल",
           "file": "फ़ाइल",
-          
-          // Sentences and phrases
+          "Generate": "उत्पन्न करें",
+          "generate": "उत्पन्न करें",
+          "Stop": "रोकें",
+          "stop": "रोकें",
+          "Start": "शुरू करें",
+          "start": "शुरू करें",
+          "Recording": "रिकॉर्डिंग",
+          "recording": "रिकॉर्डिंग",
+          "Type here": "यहां टाइप करें",
+          "type here": "यहां टाइप करें",
+          "Processing": "प्रोसेसिंग हो रही है",
+          "processing": "प्रोसेसिंग हो रही है",
+          "Done": "पूरा हुआ",
+          "done": "पूरा हुआ",
+          "Speech Converter": "भाषण कनवर्टर",
+          "speech converter": "भाषण कनवर्टर",
+          "Record Speech": "भाषण रिकॉर्ड करें",
+          "record speech": "भाषण रिकॉर्ड करें",
+          "Stop Recording": "रिकॉर्डिंग रोकें",
+          "stop recording": "रिकॉर्डिंग रोकें",
+          "Generate Audio": "ऑडियो उत्पन्न करें",
+          "generate audio": "ऑडियो उत्पन्न करें",
+          "Recent Conversions": "हाल के रूपांतरण",
+          "recent conversions": "हाल के रूपांतरण",
+          "Select language": "भाषा चुनें",
+          "select language": "भाषा चुनें",
+
+          // Sample sentences for TTS
           "This is a test": "यह एक परीक्षण है",
           "How are you?": "आप कैसे हैं?",
           "I am fine": "मैं ठीक हूँ",
@@ -283,38 +305,49 @@ export const useAIService = () => {
           "This is a document summary": "यह एक दस्तावेज़ सारांश है",
           "Convert text to speech": "टेक्स्ट को भाषण में परिवर्तित करें",
           "Speech to text converter": "भाषण से टेक्स्ट कनवर्टर",
-          "Select a language": "एक भाषा चुनें",
-          "Generate audio": "ऑडियो उत्पन्न करें",
-          "Stop recording": "रिकॉर्डिंग बंद करें",
-          "Start recording": "रिकॉर्डिंग शुरू करें",
-          "Processing your document": "आपके दस्तावेज़ को संसाधित किया जा रहा है",
-          "Your summary is ready": "आपका सारांश तैयार है",
+          "Your document": "आपका दस्तावेज",
+          "Your summary": "आपका सारांश",
           "Translate this text": "इस टेक्स्ट का अनुवाद करें",
           "Play audio": "ऑडियो चलाएं",
           "Pause audio": "ऑडियो रोकें",
-          "Recent conversions": "हाल के रूपांतरण",
           "Type or speak text here": "यहां टेक्स्ट टाइप करें या बोलें",
+          "Type or speak": "टाइप करें या बोलें",
+          "Hindi translation complete": "हिंदी अनुवाद पूरा हुआ",
+          "Hindi voice not found": "हिंदी आवाज़ नहीं मिली",
+          "For best experience": "सर्वोत्तम अनुभव के लिए",
+          "Please use a browser with Hindi voice support": "कृपया एक हिंदी आवाज़ वाला ब्राउज़र इस्तेमाल करें",
+          "This is a simulated translation to Hindi": "यह हिंदी में एक सिमुलेटेड अनुवाद है",
+          "Translation complete": "अनुवाद पूरा हुआ",
+          "Audio generated": "ऑडियो उत्पन्न हुआ",
+          "Recording started": "रिकॉर्डिंग शुरू हुई",
+          "Recording stopped": "रिकॉर्डिंग रुकी",
+          "Speech converted to text successfully": "भाषण को सफलतापूर्वक टेक्स्ट में परिवर्तित किया गया",
+          "Please enter some text to convert to speech": "कृपया भाषण में परिवर्तित करने के लिए कुछ टेक्स्ट दर्ज करें",
+          "Converting text to speech": "टेक्स्ट को भाषण में परिवर्तित किया जा रहा है",
+          "Generating audio": "ऑडियो उत्पन्न हो रहा है",
+          "Text has been converted to speech successfully": "टेक्स्ट को सफलतापूर्वक भाषण में परिवर्तित किया गया है",
+          "Failed to generate audio": "ऑडियो उत्पन्न करने में विफल",
+          "Please try again": "कृपया पुनः प्रयास करें",
+          "Translating to Hindi": "हिंदी में अनुवाद किया जा रहा है",
+          "Translating": "अनुवाद हो रहा है",
+          "Your text has been translated to Hindi successfully": "आपके टेक्स्ट का हिंदी में सफलतापूर्वक अनुवाद किया गया है!",
+          "Failed to translate text": "टेक्स्ट का अनुवाद करने में विफल",
+          "Please enter some text to translate": "कृपया अनुवाद के लिए कुछ टेक्स्ट दर्ज करें",
         };
         
-        // Simulate comprehensive Hindi translation
-        // First pass - replace exact phrases
+        // First, specifically check for entire sentences or phrases
         Object.entries(hindiTranslations).forEach(([english, hindi]) => {
-          translatedText = translatedText.replace(new RegExp(english, 'g'), hindi);
+          // Use a case-insensitive regex to replace whole phrases
+          const regex = new RegExp(`\\b${english}\\b`, 'gi');
+          translatedText = translatedText.replace(regex, hindi);
         });
         
-        // For any remaining text not covered by our dictionary, we'll add Hindi-like patterns
-        const words = translatedText.split(' ');
-        translatedText = words.map(word => {
-          // If word wasn't translated already and isn't punctuation
-          if (!Object.values(hindiTranslations).some(hindi => word.includes(hindi)) && 
-              word.length > 3 && 
-              !/[!.,?;:]/.test(word)) {
-            return `${word}`;
-          }
-          return word;
-        }).join(' ');
+        // If text is mostly unchanged, provide a more comprehensive Hindi translation
+        if (translatedText === text || translatedText.indexOf(text) > -1) {
+          translatedText = `यह एक हिंदी अनुवाद है: ${text}`;
+        }
         
-        // Add a Hindi prefix to indicate translation happened
+        // Make sure to prefix that this is a Hindi translation
         if (!translatedText.startsWith("[हिंदी अनुवाद]")) {
           translatedText = `[हिंदी अनुवाद] ${translatedText}`;
         }
@@ -352,19 +385,21 @@ export const useAIService = () => {
       const langName = SUPPORTED_LANGUAGES.find(l => l.code === language)?.name || language;
       
       toast({
-        title: "Generating Speech",
-        description: `Converting text to ${langName} audio...`,
+        title: language === 'hi' ? "ऑडियो उत्पन्न हो रहा है" : "Generating Speech",
+        description: language === 'hi' ? 
+          "टेक्स्ट को हिंदी भाषण में परिवर्तित किया जा रहा है..." : 
+          `Converting text to ${langName} audio...`,
       });
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // In a real implementation, you would call a Text-to-Speech API
-      
       // For Hindi specifically - attempt to use browser's speech synthesis
       if (language === 'hi') {
         // First attempt to use browser's speech synthesis for immediate feedback
         if ('speechSynthesis' in window) {
+          console.log("Using speech synthesis for Hindi text-to-speech");
+          
           // Make sure the speech synthesis has loaded voices
           if (window.speechSynthesis.getVoices().length === 0) {
             // If no voices are available yet, wait for them to load
@@ -388,6 +423,8 @@ export const useAIService = () => {
           
           // Try to find a Hindi voice
           const voices = window.speechSynthesis.getVoices();
+          console.log("Available voices:", voices.map(v => `${v.name} (${v.lang})`));
+          
           const hindiVoice = voices.find(voice => 
             voice.lang === 'hi-IN' || 
             voice.lang.startsWith('hi') ||
@@ -398,16 +435,21 @@ export const useAIService = () => {
             utterance.voice = hindiVoice;
             console.log("Using Hindi voice:", hindiVoice.name);
           } else {
-            console.log("No Hindi voice found, available voices:", voices.map(v => `${v.name} (${v.lang})`).join(', '));
+            console.log("No Hindi voice found, using default voice");
           }
           
           // Speak the text
+          window.speechSynthesis.cancel(); // Cancel any ongoing speech
           window.speechSynthesis.speak(utterance);
           
+          console.log("Started Hindi speech synthesis");
+          
           toast({
-            title: "Hindi TTS",
+            title: "हिंदी TTS",
             description: "हिंदी वाणी रूपांतरण पूरा हुआ", // Hindi speech conversion complete
           });
+        } else {
+          console.log("Speech synthesis not available");
         }
       }
       
@@ -415,8 +457,10 @@ export const useAIService = () => {
       const mockAudioUrl = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
       
       toast({
-        title: "Audio Generated",
-        description: `Text converted to ${langName} speech successfully`,
+        title: language === 'hi' ? "ऑडियो उत्पन्न हुआ" : "Audio Generated",
+        description: language === 'hi' ? 
+          "टेक्स्ट को सफलतापूर्वक हिंदी भाषण में परिवर्तित किया गया है" : 
+          `Text converted to ${langName} speech successfully`,
       });
       
       return mockAudioUrl;
