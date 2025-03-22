@@ -16,6 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { useAIService } from "@/lib/AIService";
+
+// Add TypeScript interface for speech recognition
+interface WindowWithSpeechRecognition extends Window {
+  SpeechRecognition?: any;
+  webkitSpeechRecognition?: any;
+}
 
 interface AudioConverterProps {
   language: string;
@@ -26,15 +33,18 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(language || DEFAULT_LANGUAGE);
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [previousConversions, setPreviousConversions] = useState<AudioConversion[]>([]);
+  const [recognition, setRecognition] = useState<any>(null);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
+  const { translateText, textToSpeech } = useAIService();
   
   useEffect(() => {
     // Load previously stored conversions from localStorage
@@ -49,15 +59,60 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     }
 
     // Set up speech recognition if available
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const windowWithSpeech = window as WindowWithSpeechRecognition;
+    if (windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition) {
       setupSpeechRecognition();
     }
+
+    // Clean up on unmount
+    return () => {
+      if (recognition) {
+        recognition.stop();
+      }
+    };
   }, []);
 
   const setupSpeechRecognition = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const windowWithSpeech = window as WindowWithSpeechRecognition;
+    const SpeechRecognition = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
+
+    const recognitionInstance = new SpeechRecognition();
+    recognitionInstance.continuous = true;
+    recognitionInstance.interimResults = true;
+    recognitionInstance.lang = selectedLanguage;
+
+    recognitionInstance.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          transcript += event.results[i][0].transcript;
+        }
+      }
+      if (transcript) {
+        setText(prev => prev + ' ' + transcript);
+      }
+    };
+
+    recognitionInstance.onerror = (event: any) => {
+      console.error('Speech recognition error', event);
+      toast({
+        title: "Recognition Error",
+        description: "There was a problem with speech recognition.",
+        variant: "destructive",
+      });
+      setIsRecording(false);
+    };
+
+    setRecognition(recognitionInstance);
   };
+
+  useEffect(() => {
+    // Update recognition language when selected language changes
+    if (recognition) {
+      recognition.lang = selectedLanguage;
+    }
+  }, [selectedLanguage, recognition]);
 
   const toggleRecording = () => {
     if (isRecording) {
@@ -69,19 +124,21 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   
   const startRecording = async () => {
     try {
-      // In a real implementation, this would use the Web Speech API
-      // or other speech recognition service
-      setIsRecording(true);
+      if (!recognition) {
+        setupSpeechRecognition();
+      }
       
-      toast({
-        title: "Recording started",
-        description: "Speak clearly into your microphone",
-      });
-      
-      // Simulate recording and transcription
-      setTimeout(() => {
-        stopRecording();
-      }, 3000);
+      if (recognition) {
+        recognition.start();
+        setIsRecording(true);
+        
+        toast({
+          title: "Recording started",
+          description: "Speak clearly into your microphone",
+        });
+      } else {
+        throw new Error("Speech recognition not available");
+      }
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
@@ -94,18 +151,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   };
   
   const stopRecording = () => {
+    if (recognition) {
+      recognition.stop();
+    }
     setIsRecording(false);
-    
-    // Simulate transcription result
-    const simulatedTranscriptions = [
-      "This is a simulated transcription of your speech. In a real implementation, this would be the actual transcription from the speech recognition service.",
-      "The quick brown fox jumps over the lazy dog. This is a test of the speech recognition system.",
-      "Hello world! This is a demonstration of the audio conversion feature in our document summarizer app.",
-      "Today is a beautiful day. I'm testing the speech-to-text functionality of this application."
-    ];
-    
-    const randomIndex = Math.floor(Math.random() * simulatedTranscriptions.length);
-    setText(simulatedTranscriptions[randomIndex]);
     
     toast({
       title: "Recording stopped",
@@ -126,70 +175,31 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     setIsGeneratingAudio(true);
     
     try {
+      const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
+      
       toast({
         title: "Generating audio",
-        description: `Converting text to speech in ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language'}...`,
+        description: `Converting text to speech in ${languageName}...`,
       });
 
-      // In a real implementation, you would call a Text-to-Speech API like:
-      // - Google Cloud Text-to-Speech API
-      // - Amazon Polly
-      // - Microsoft Azure Text-to-Speech
-      // - ElevenLabs (for high-quality voices)
+      // Use the textToSpeech service from AIService
+      const generatedAudioUrl = await textToSpeech(text, selectedLanguage);
       
-      // For now, we'll use the browser's built-in speech synthesis
-      // Create speech synthesis in the chosen language
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = selectedLanguage; // e.g., "en-US", "fr-FR", "es-ES", etc.
-      utterance.volume = volume;
-      
-      // Find a voice that matches the selected language
-      const voices = window.speechSynthesis.getVoices();
-      const languageVoice = voices.find(voice => voice.lang.startsWith(selectedLanguage.split('-')[0]));
-      if (languageVoice) {
-        utterance.voice = languageVoice;
-      }
-      
-      // Record the synthesis to create an audio URL
-      // For demonstration, we'll simulate this with an audio oscillator
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      gainNode.gain.value = volume;
-      oscillator.frequency.value = 440;
-      oscillator.type = 'sine';
-      
-      const startTime = audioContext.currentTime;
-      const duration = Math.min(10, Math.max(2, text.length / 20)); // Scale duration based on text length
-      
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration);
-      
-      // Record the oscillator
-      const recorder = audioContext.createMediaStreamDestination();
-      gainNode.connect(recorder);
-      
-      const mediaRecorder = new MediaRecorder(recorder.stream);
-      const audioChunks: BlobPart[] = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
-      };
-      
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
+      if (generatedAudioUrl) {
+        setAudioUrl(generatedAudioUrl);
+        
+        // Create a proper object for the audio element
+        if (audioRef.current) {
+          audioRef.current.src = generatedAudioUrl;
+          audioRef.current.volume = volume;
+          audioRef.current.load();
+        }
         
         // Create and save the audio conversion
         const newConversion: AudioConversion = {
           id: crypto.randomUUID(),
           text,
-          audioUrl: url,
+          audioUrl: generatedAudioUrl,
           isGenerating: false,
           language: selectedLanguage,
           createdAt: new Date(),
@@ -205,28 +215,56 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         // Send to parent component
         onSaveAudioConversion(newConversion);
         
-        setIsGeneratingAudio(false);
-        
         toast({
           title: "Audio generated",
           description: "Text has been converted to speech successfully",
         });
 
-        // Also speak the text using the browser's speech synthesis
-        window.speechSynthesis.speak(utterance);
-      };
-      
-      mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), duration * 1000);
+        // Also use speech synthesis for immediate feedback
+        speakText(text, selectedLanguage);
+      }
     } catch (error) {
       console.error("Error generating audio:", error);
-      setIsGeneratingAudio(false);
-      
       toast({
         title: "Error",
         description: "Failed to generate audio. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+  
+  // Function to use Speech Synthesis API for speaking text
+  const speakText = (textToSpeak: string, language: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = language;
+      utterance.volume = volume;
+      
+      // Find a voice that matches the selected language
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(voice => 
+        voice.lang.startsWith(language.split('-')[0]) || 
+        voice.lang === language
+      );
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      // Hindi voice specific handling
+      if (language === 'hi') {
+        const hindiVoice = voices.find(voice => 
+          voice.lang === 'hi-IN' || 
+          voice.name.includes('Hindi')
+        );
+        if (hindiVoice) {
+          utterance.voice = hindiVoice;
+        }
+      }
+      
+      window.speechSynthesis.speak(utterance);
     }
   };
   
@@ -236,7 +274,14 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => {
+        console.error("Error playing audio:", err);
+        toast({
+          title: "Playback Error",
+          description: "Could not play the audio. Please try again.",
+          variant: "destructive",
+        });
+      });
     }
     
     setIsPlaying(!isPlaying);
@@ -256,24 +301,38 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       return;
     }
 
-    toast({
-      title: "Translating",
-      description: `Translating text to ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language'}...`,
-    });
+    setIsTranslating(true);
 
-    // Simulate translation delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
+      
+      toast({
+        title: "Translating",
+        description: `Translating text to ${targetLanguageName}...`,
+      });
 
-    // In a real implementation, you would call a translation API
-    // For now, we'll simulate a translation
-    const translatedPrefix = `[Translated to ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}] `;
-    const originalText = text;
-    setText(translatedPrefix + originalText);
-
-    toast({
-      title: "Translation complete",
-      description: "Your text has been translated successfully!",
-    });
+      // Use the AIService translation method
+      const translationResponse = await translateText(text, selectedLanguage);
+      
+      if (translationResponse) {
+        const translatedText = translationResponse.translatedText;
+        setText(translatedText);
+        
+        toast({
+          title: "Translation complete",
+          description: `Your text has been translated to ${targetLanguageName} successfully!`,
+        });
+      }
+    } catch (error) {
+      console.error("Error translating text:", error);
+      toast({
+        title: "Translation Error",
+        description: "Failed to translate text. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranslating(false);
+    }
   };
   
   const toggleMute = () => {
@@ -365,9 +424,19 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                 onClick={translateText}
                 variant="secondary"
                 className="flex-1 flex items-center justify-center gap-2"
+                disabled={!text.trim() || isTranslating}
               >
-                <Languages className="h-4 w-4" />
-                Translate
+                {isTranslating ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Translating...
+                  </div>
+                ) : (
+                  <>
+                    <Languages className="h-4 w-4" />
+                    Translate
+                  </>
+                )}
               </Button>
             </div>
             

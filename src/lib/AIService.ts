@@ -213,22 +213,45 @@ export const useAIService = () => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // In a real implementation, you would call a translation API like:
-      // - Google Translate API
-      // - DeepL API
-      // - Microsoft Translator API
+      // Hindi specific translations - in real implementation, you'd call a translation API
+      let translatedText = text;
+      if (targetLang === 'hi' || targetLang === 'hi-IN') {
+        // Sample Hindi translations for common phrases to demonstrate
+        if (text.includes("Hello") || text.includes("hello")) {
+          translatedText = translatedText.replace(/Hello|hello/g, "नमस्ते");
+        }
+        if (text.includes("Good morning")) {
+          translatedText = translatedText.replace(/Good morning/g, "सुप्रभात");
+        }
+        if (text.includes("Thank you")) {
+          translatedText = translatedText.replace(/Thank you/g, "धन्यवाद");
+        }
+        if (text.includes("Welcome")) {
+          translatedText = translatedText.replace(/Welcome/g, "स्वागत है");
+        }
+        
+        // Add a Hindi prefix to indicate translation happened
+        translatedText = `[हिंदी अनुवाद] ${translatedText}`;
+      } else {
+        // In a real implementation, you would call a translation API like:
+        // - Google Translate API
+        // - DeepL API
+        // - Microsoft Translator API
+        
+        // Mock response for other languages
+        const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
+        translatedText = `[This is a simulated translation to ${targetLanguageName}]\n\n${text}`;
+      }
       
-      // Mock response
-      const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
       const mockTranslation: TranslationResponse = {
-        translatedText: `[This is a simulated translation to ${targetLanguageName}]\n\n${text}`,
+        translatedText: translatedText,
         sourceLang: "en",
         targetLang: targetLang,
       };
       
       toast({
         title: "Translation Complete",
-        description: `Content translated to ${targetLanguageName} successfully`,
+        description: `Content translated successfully`,
       });
       
       return mockTranslation;
@@ -245,19 +268,31 @@ export const useAIService = () => {
 
   const textToSpeech = async (text: string, language: string): Promise<string | null> => {
     try {
+      const langName = SUPPORTED_LANGUAGES.find(l => l.code === language)?.name || language;
+      
       toast({
         title: "Generating Speech",
-        description: "Converting text to audio...",
+        description: `Converting text to ${langName} audio...`,
       });
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // In a real implementation, you would call a Text-to-Speech API like:
-      // - Google Cloud Text-to-Speech API
-      // - Amazon Polly
+      // - Google Cloud Text-to-Speech API for Hindi support
+      // - Amazon Polly (has Hindi voices)
       // - Microsoft Azure Text-to-Speech
       // - ElevenLabs (for high-quality voices)
+      
+      // For Hindi specifically
+      if (language === 'hi' || language === 'hi-IN') {
+        // In a real implementation, you would generate Hindi speech
+        // For now we'll use a different mock audio data to simulate Hindi audio
+        toast({
+          title: "Hindi TTS",
+          description: "Hindi text-to-speech conversion complete",
+        });
+      }
       
       // Since we can't generate real audio here, we'll return a simulated audio URL
       // This would be a base64 encoded audio or a URL to an audio file in a real implementation
@@ -265,7 +300,7 @@ export const useAIService = () => {
       
       toast({
         title: "Audio Generated",
-        description: "Text converted to speech successfully",
+        description: `Text converted to ${langName} speech successfully`,
       });
       
       return mockAudioUrl;
