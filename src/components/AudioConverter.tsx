@@ -72,6 +72,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     };
   }, []);
 
+  // Set up speech recognition with the correct language setting
   const setupSpeechRecognition = () => {
     const windowWithSpeech = window as WindowWithSpeechRecognition;
     const SpeechRecognition = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
@@ -80,7 +81,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     const recognitionInstance = new SpeechRecognition();
     recognitionInstance.continuous = true;
     recognitionInstance.interimResults = true;
-    recognitionInstance.lang = selectedLanguage;
+    
+    // Set language for recognition
+    // For Hindi, explicitly use hi-IN as the recognition language code
+    recognitionInstance.lang = selectedLanguage === 'hi' ? 'hi-IN' : selectedLanguage;
 
     recognitionInstance.onresult = (event: any) => {
       let transcript = '';
@@ -107,10 +111,11 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     setRecognition(recognitionInstance);
   };
 
+  // Update recognition language when selected language changes
   useEffect(() => {
-    // Update recognition language when selected language changes
     if (recognition) {
-      recognition.lang = selectedLanguage;
+      // For Hindi, explicitly use hi-IN as the recognition language code
+      recognition.lang = selectedLanguage === 'hi' ? 'hi-IN' : selectedLanguage;
     }
   }, [selectedLanguage, recognition]);
 
@@ -132,9 +137,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         recognition.start();
         setIsRecording(true);
         
+        const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
         toast({
           title: "Recording started",
-          description: "Speak clearly into your microphone",
+          description: `Speak clearly into your microphone in ${languageName}`,
         });
       } else {
         throw new Error("Speech recognition not available");
@@ -238,34 +244,58 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   // Function to use Speech Synthesis API for speaking text
   const speakText = (textToSpeak: string, language: string) => {
     if ('speechSynthesis' in window) {
+      // For Hindi, make sure we're using the correct language code
+      const langCode = language === 'hi' ? 'hi-IN' : language;
+      
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = language;
+      utterance.lang = langCode;
       utterance.volume = volume;
       
-      // Find a voice that matches the selected language
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(voice => 
-        voice.lang.startsWith(language.split('-')[0]) || 
-        voice.lang === language
+      // Make sure the speech synthesis has loaded voices
+      let voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        // If voices haven't loaded yet, wait a bit and try again
+        setTimeout(() => {
+          voices = window.speechSynthesis.getVoices();
+          setVoiceAndSpeak(utterance, voices, langCode);
+        }, 100);
+      } else {
+        setVoiceAndSpeak(utterance, voices, langCode);
+      }
+    }
+  };
+  
+  // Helper function to set voice and speak
+  const setVoiceAndSpeak = (utterance: SpeechSynthesisUtterance, voices: SpeechSynthesisVoice[], langCode: string) => {
+    // Try finding exact language match
+    let preferredVoice = voices.find(voice => voice.lang === langCode);
+    
+    // If not found, try finding partial match (e.g., 'hi' in 'hi-IN')
+    if (!preferredVoice) {
+      preferredVoice = voices.find(voice => 
+        voice.lang.startsWith(langCode.split('-')[0])
+      );
+    }
+    
+    // Special handling for Hindi
+    if (langCode === 'hi-IN' || langCode === 'hi') {
+      const hindiVoice = voices.find(voice => 
+        voice.lang === 'hi-IN' || 
+        voice.lang.startsWith('hi') ||
+        voice.name.toLowerCase().includes('hindi')
       );
       
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+      if (hindiVoice) {
+        preferredVoice = hindiVoice;
       }
-      
-      // Hindi voice specific handling
-      if (language === 'hi') {
-        const hindiVoice = voices.find(voice => 
-          voice.lang === 'hi-IN' || 
-          voice.name.includes('Hindi')
-        );
-        if (hindiVoice) {
-          utterance.voice = hindiVoice;
-        }
-      }
-      
-      window.speechSynthesis.speak(utterance);
     }
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    console.log(`Speaking in ${langCode} using voice:`, preferredVoice?.name || 'default voice');
+    window.speechSynthesis.speak(utterance);
   };
   
   const togglePlayback = () => {
