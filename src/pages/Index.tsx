@@ -27,8 +27,8 @@ const Index = () => {
         const parsedConversions = JSON.parse(savedAudioConversions);
         const processedConversions = parsedConversions.map((conv: any) => ({
           ...conv,
-          // Convert string date to Date object if it's a string
-          createdAt: conv.createdAt ? new Date(conv.createdAt) : new Date()
+          // Ensure createdAt is always a Date object
+          createdAt: new Date(conv.createdAt || Date.now())
         }));
         setAudioConversions(processedConversions);
       } catch (e) {
@@ -109,14 +109,23 @@ const Index = () => {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
       
+      // Make sure to get updated voices
       const voices = window.speechSynthesis.getVoices();
+      
+      // Better voice selection for Hindi and other languages
+      const exactLangVoice = voices.find(voice => voice.lang === language);
       const langVoice = voices.find(voice => voice.lang.startsWith(language.split('-')[0]));
-      if (langVoice) {
+      
+      if (exactLangVoice) {
+        utterance.voice = exactLangVoice;
+      } else if (langVoice) {
         utterance.voice = langVoice;
       }
       
       window.speechSynthesis.speak(utterance);
     }
+    
+    const currentDate = new Date();
     
     setTimeout(() => {
       const newConversion: AudioConversion = {
@@ -124,14 +133,14 @@ const Index = () => {
         text,
         isGenerating: false,
         language,
-        createdAt: new Date(), // Ensure this is a Date object
+        createdAt: currentDate,
         audioUrl: "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
       };
       
       const updatedConversions = [newConversion, ...audioConversions.slice(0, 4)];
       setAudioConversions(updatedConversions);
       
-      // Ensure we're storing dates in a format that can be reconstructed
+      // Store with proper date handling
       localStorage.setItem('audioConversions', JSON.stringify(updatedConversions));
       
       toast({
@@ -145,7 +154,7 @@ const Index = () => {
     // Ensure createdAt is a Date object
     const processedConversion = {
       ...conversion,
-      createdAt: conversion.createdAt instanceof Date ? conversion.createdAt : new Date(conversion.createdAt || Date.now())
+      createdAt: new Date(conversion.createdAt instanceof Date ? conversion.createdAt : Date.now())
     };
     
     const updatedConversions = [processedConversion, ...audioConversions.slice(0, 4)];
@@ -158,7 +167,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 to-purple-50 dark:from-violet-950 dark:to-purple-950">
       <Header 
         language={language} 
         setLanguage={(newLang) => {
@@ -233,7 +242,7 @@ const Index = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600"
+                    className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-purple-600"
                   >
                     {language === 'hi' ? 'ऑडियो रूपांतरण' : 'Audio Conversion'}
                   </motion.h2>
