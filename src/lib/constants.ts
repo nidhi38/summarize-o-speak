@@ -78,4 +78,8 @@ export const HINDI_TEXT_SAMPLES = {
   speakNow: "अब बोलें",
   listening: "सुन रहा है...",
   notListening: "सुन नहीं रहा है",
+  // Adding date format related translations
+  createdOn: "बनाया गया",
+  today: "आज",
+  yesterday: "कल",
 };

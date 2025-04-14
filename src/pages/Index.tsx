@@ -23,7 +23,14 @@ const Index = () => {
     const savedAudioConversions = localStorage.getItem('audioConversions');
     if (savedAudioConversions) {
       try {
-        setAudioConversions(JSON.parse(savedAudioConversions));
+        // Parse and ensure createdAt is a proper Date object
+        const parsedConversions = JSON.parse(savedAudioConversions);
+        const processedConversions = parsedConversions.map((conv: any) => ({
+          ...conv,
+          // Convert string date to Date object if it's a string
+          createdAt: conv.createdAt ? new Date(conv.createdAt) : new Date()
+        }));
+        setAudioConversions(processedConversions);
       } catch (e) {
         console.error("Error loading saved audio conversions:", e);
       }
@@ -117,13 +124,14 @@ const Index = () => {
         text,
         isGenerating: false,
         language,
-        createdAt: new Date(),
+        createdAt: new Date(), // Ensure this is a Date object
         audioUrl: "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
       };
       
       const updatedConversions = [newConversion, ...audioConversions.slice(0, 4)];
       setAudioConversions(updatedConversions);
       
+      // Ensure we're storing dates in a format that can be reconstructed
       localStorage.setItem('audioConversions', JSON.stringify(updatedConversions));
       
       toast({
@@ -134,7 +142,13 @@ const Index = () => {
   };
 
   const handleSaveAudioConversion = (conversion: AudioConversion) => {
-    const updatedConversions = [conversion, ...audioConversions.slice(0, 4)];
+    // Ensure createdAt is a Date object
+    const processedConversion = {
+      ...conversion,
+      createdAt: conversion.createdAt instanceof Date ? conversion.createdAt : new Date(conversion.createdAt || Date.now())
+    };
+    
+    const updatedConversions = [processedConversion, ...audioConversions.slice(0, 4)];
     setAudioConversions(updatedConversions);
     localStorage.setItem('audioConversions', JSON.stringify(updatedConversions));
   };
