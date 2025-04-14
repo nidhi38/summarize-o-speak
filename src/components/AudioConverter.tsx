@@ -1,9 +1,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Mic, Square, Play, Pause, Volume2, VolumeX, Languages } from "lucide-react";
+import { Mic, Square, Play, Pause, Volume2, VolumeX, Languages, Sparkles, Wand2, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { AudioConversion } from "@/lib/types";
@@ -43,6 +43,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   const [recognition, setRecognition] = useState<any>(null);
   const [voicesList, setVoicesList] = useState<SpeechSynthesisVoice[]>([]);
   const [hindiVoiceFound, setHindiVoiceFound] = useState(false);
+  const [needsTranslation, setNeedsTranslation] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
@@ -83,6 +84,86 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     };
   }, [language]);
 
+  // Force voice loading on component mount and when language changes
+  useEffect(() => {
+    const checkAndLoadVoices = async () => {
+      if ('speechSynthesis' in window) {
+        // Initial check
+        let voices = window.speechSynthesis.getVoices();
+        
+        // If voices are not loaded, wait for them
+        if (voices.length === 0) {
+          try {
+            voices = await waitForVoices();
+          } catch (e) {
+            console.error("Error loading voices:", e);
+          }
+        }
+        
+        setVoicesList(voices);
+        const hindiVoice = findHindiVoice(voices);
+        setHindiVoiceFound(!!hindiVoice);
+        
+        if (hindiVoice) {
+          console.log("Hindi voice successfully loaded:", hindiVoice.name);
+          if (selectedLanguage === 'hi') {
+            toast({
+              title: "हिंदी आवाज़ मिल गई",
+              description: "हिंदी वाणी सुविधा उपलब्ध है",
+            });
+          }
+        } else {
+          console.warn("No Hindi voice found");
+        }
+      }
+    };
+    
+    checkAndLoadVoices();
+  }, [selectedLanguage]);
+
+  // Check if text contains Hindi characters
+  useEffect(() => {
+    if (selectedLanguage === 'hi') {
+      const containsHindiChars = /[\u0900-\u097F]/.test(text);
+      setNeedsTranslation(!containsHindiChars && text.trim().length > 0);
+    }
+  }, [text, selectedLanguage]);
+
+  const waitForVoices = () => {
+    return new Promise<SpeechSynthesisVoice[]>((resolve, reject) => {
+      // Try getting voices immediately
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        return resolve(voices);
+      }
+      
+      // If no voices, set up an event listener
+      let timeoutId: number;
+      
+      const voicesChangedHandler = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          clearTimeout(timeoutId);
+          window.speechSynthesis.onvoiceschanged = null;
+          resolve(voices);
+        }
+      };
+      
+      window.speechSynthesis.onvoiceschanged = voicesChangedHandler;
+      
+      // Set a timeout in case voices don't load
+      timeoutId = window.setTimeout(() => {
+        window.speechSynthesis.onvoiceschanged = null;
+        const fallbackVoices = window.speechSynthesis.getVoices();
+        if (fallbackVoices.length > 0) {
+          resolve(fallbackVoices);
+        } else {
+          reject(new Error("Could not load voices"));
+        }
+      }, 3000);
+    });
+  };
+
   const loadVoices = () => {
     if ('speechSynthesis' in window) {
       // If voices are already loaded
@@ -108,10 +189,22 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   };
 
   const findHindiVoice = (voices: SpeechSynthesisVoice[]) => {
+    // First try to find a natural-sounding Hindi voice
+    const naturalHindiVoice = voices.find(voice => 
+      (voice.lang === 'hi-IN' || voice.lang.startsWith('hi')) &&
+      (voice.name.toLowerCase().includes('natural') || voice.name.toLowerCase().includes('madhur'))
+    );
+    
+    if (naturalHindiVoice) {
+      return naturalHindiVoice;
+    }
+    
+    // Fall back to any Hindi voice
     return voices.find(voice => 
       voice.lang === 'hi-IN' || 
       voice.lang.startsWith('hi') ||
-      voice.name.toLowerCase().includes('hindi')
+      voice.name.toLowerCase().includes('hindi') ||
+      voice.name.toLowerCase().includes('indian')
     );
   };
 
@@ -144,8 +237,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     recognitionInstance.onerror = (event: any) => {
       console.error('Speech recognition error', event);
       toast({
-        title: "Recognition Error",
-        description: "There was a problem with speech recognition.",
+        title: selectedLanguage === 'hi' ? "मान्यता त्रुटि" : "Recognition Error",
+        description: selectedLanguage === 'hi' ? 
+          "भाषण पहचान के साथ एक समस्या थी।" : 
+          "There was a problem with speech recognition.",
         variant: "destructive",
       });
       setIsRecording(false);
@@ -182,7 +277,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         
         const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
         const message = selectedLanguage === 'hi' ? 
-          "माइक्रोफ़ोन में स्पष्ट रूप से बोलें" : 
+          HINDI_TEXT_SAMPLES.speakClearly : 
           `Speak clearly into your microphone in ${languageName}`;
         
         toast({
@@ -196,7 +291,9 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       console.error("Error starting recording:", error);
       toast({
         title: "Error",
-        description: "Could not access microphone. Please check permissions.",
+        description: selectedLanguage === 'hi' ? 
+          "माइक्रोफ़ोन तक पहुंचने में असमर्थ। कृपया अनुमतियों की जांच करें।" : 
+          "Could not access microphone. Please check permissions.",
         variant: "destructive",
       });
       setIsRecording(false);
@@ -236,8 +333,30 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     setIsGeneratingAudio(true);
     
     try {
+      let textToConvert = text;
       const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
       
+      // For Hindi, check if text needs translation first
+      if (selectedLanguage === 'hi' && needsTranslation) {
+        // Text doesn't contain Hindi characters, translate it first
+        const translationMessage = "अंग्रेजी से हिंदी में अनुवाद किया जा रहा है...";
+        
+        toast({
+          title: "अनुवाद हो रहा है",
+          description: translationMessage,
+        });
+        
+        const translationResponse = await aiTranslateText(text, 'hi');
+        if (translationResponse) {
+          textToConvert = translationResponse.translatedText;
+          console.log("Translated text for TTS:", textToConvert);
+          
+          // Update the text area with translated text
+          setText(textToConvert);
+          setNeedsTranslation(false);
+        }
+      }
+
       const message = selectedLanguage === 'hi' ? 
         "टेक्स्ट को हिंदी भाषण में परिवर्तित किया जा रहा है..." : 
         `Converting text to speech in ${languageName}...`;
@@ -247,19 +366,15 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         description: message,
       });
 
-      // For Hindi text, check if it needs translation first
-      let textToConvert = text;
-      if (selectedLanguage === 'hi' && !/[\u0900-\u097F]/.test(text)) {
-        // Text doesn't contain Hindi characters, so translate it first
-        console.log("Text doesn't contain Hindi characters, translating first");
-        const translationResponse = await aiTranslateText(text, 'hi');
-        if (translationResponse) {
-          textToConvert = translationResponse.translatedText;
-          console.log("Translated text:", textToConvert);
+      // Use direct browser speech synthesis for immediate Hindi speech output
+      if (selectedLanguage === 'hi') {
+        const success = speakHindiDirectly(textToConvert);
+        if (!success) {
+          console.warn("Direct Hindi speech failed, falling back to API");
         }
       }
 
-      // Use the textToSpeech service from AIService
+      // Use the textToSpeech service from AIService as backup
       const generatedAudioUrl = await textToSpeech(textToConvert, selectedLanguage);
       
       if (generatedAudioUrl) {
@@ -301,11 +416,8 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
           description: successMessage,
         });
 
-        // Also use speech synthesis for immediate feedback
-        if (selectedLanguage === 'hi') {
-          // Text is already in Hindi, use it directly
-          speakText(textToConvert, selectedLanguage);
-        } else {
+        // Also use speech synthesis for immediate feedback if not Hindi (Hindi is handled above)
+        if (selectedLanguage !== 'hi') {
           speakText(text, selectedLanguage);
         }
       }
@@ -323,6 +435,40 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     } finally {
       setIsGeneratingAudio(false);
     }
+  };
+  
+  // Special function optimized for Hindi speech
+  const speakHindiDirectly = (textToSpeak: string): boolean => {
+    if ('speechSynthesis' in window) {
+      // Cancel any previous speech
+      window.speechSynthesis.cancel();
+      
+      // Create a new utterance
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'hi-IN'; // Force Hindi language
+      utterance.volume = volume;
+      utterance.rate = 0.9; // Slightly slower for better Hindi pronunciation
+      
+      // Get available voices and find Hindi voice
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        return false;
+      }
+      
+      const hindiVoice = findHindiVoice(voices);
+      if (!hindiVoice) {
+        console.warn("No Hindi voice available for direct speech");
+        return false;
+      }
+      
+      console.log(`Speaking Hindi using voice: ${hindiVoice.name}`);
+      utterance.voice = hindiVoice;
+      
+      // Begin speaking
+      window.speechSynthesis.speak(utterance);
+      return true;
+    }
+    return false;
   };
   
   // Function to use Speech Synthesis API for speaking text
@@ -354,29 +500,26 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   
   // Helper function to set voice and speak
   const setVoiceAndSpeak = (utterance: SpeechSynthesisUtterance, voices: SpeechSynthesisVoice[], langCode: string) => {
-    // Try finding exact language match
-    let preferredVoice = voices.find(voice => voice.lang === langCode);
-    
-    // If not found, try finding partial match (e.g., 'hi' in 'hi-IN')
-    if (!preferredVoice) {
-      preferredVoice = voices.find(voice => 
-        voice.lang.startsWith(langCode.split('-')[0])
-      );
-    }
+    let preferredVoice = null;
     
     // Special handling for Hindi
     if (langCode === 'hi-IN' || langCode === 'hi') {
-      const hindiVoice = voices.find(voice => 
-        voice.lang === 'hi-IN' || 
-        voice.lang.startsWith('hi') ||
-        voice.name.toLowerCase().includes('hindi')
-      );
-      
-      if (hindiVoice) {
-        preferredVoice = hindiVoice;
-        console.log("Using Hindi voice for speech:", hindiVoice.name);
+      preferredVoice = findHindiVoice(voices);
+      if (preferredVoice) {
+        console.log("Using Hindi voice for speech:", preferredVoice.name);
       } else {
         console.log("No Hindi voice found, using default voice");
+      }
+    } else {
+      // For non-Hindi languages
+      // Try finding exact language match
+      preferredVoice = voices.find(voice => voice.lang === langCode);
+      
+      // If not found, try finding partial match (e.g., 'en' in 'en-US')
+      if (!preferredVoice) {
+        preferredVoice = voices.find(voice => 
+          voice.lang.startsWith(langCode.split('-')[0])
+        );
       }
     }
     
@@ -445,6 +588,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       if (translationResponse) {
         const translatedText = translationResponse.translatedText;
         setText(translatedText);
+        setNeedsTranslation(false);
         
         const successMessage = selectedLanguage === 'hi' ? 
           "आपके टेक्स्ट का हिंदी में सफलतापूर्वक अनुवाद किया गया है!" : 
@@ -507,7 +651,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   };
 
   const getCardTitle = () => {
-    return selectedLanguage === 'hi' ? "भाषण कनवर्टर" : "Speech Converter";
+    return selectedLanguage === 'hi' ? HINDI_TEXT_SAMPLES.speechConverterTitle : "Speech Converter";
   };
 
   const getTextareaPlaceholder = () => {
@@ -522,30 +666,88 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     return selectedLanguage === 'hi' ? "हाल के रूपांतरण" : "Recent Conversions";
   };
   
+  // Visual hint if text needs translation when Hindi is selected
+  const showTranslationHint = selectedLanguage === 'hi' && needsTranslation;
+  
+  // Different design themes based on language
+  const getDesignTheme = () => {
+    switch(selectedLanguage) {
+      case 'hi':
+        return {
+          gradient: "from-orange-500/30 via-purple-500/30 to-pink-500/30",
+          borderColor: "border-orange-300",
+          buttonGradient: "from-orange-500 to-pink-500",
+          secondaryColor: "bg-purple-100 text-purple-800 hover:bg-purple-200",
+          pulseColor: "bg-orange-500"
+        };
+      default:
+        return {
+          gradient: "from-primary/10 to-transparent",
+          borderColor: "border-primary/10",
+          buttonGradient: "from-primary to-primary/80",
+          secondaryColor: "bg-secondary",
+          pulseColor: "bg-primary"
+        };
+    }
+  };
+  
+  const theme = getDesignTheme();
+  
   return (
-    <section className="w-full max-w-3xl mx-auto mt-12 px-4 mb-20">
+    <section className="w-full max-w-4xl mx-auto mt-12 px-4 mb-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="glass hover:shadow-glass-hover transition-all duration-300 overflow-hidden border border-primary/10">
-          <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
-            <CardTitle className="text-2xl flex items-center gap-2">
+        <Card className={`overflow-hidden border ${theme.borderColor} shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <CardHeader className={`bg-gradient-to-r ${theme.gradient} py-6`}>
+            <CardTitle className="text-2xl md:text-3xl flex items-center gap-3 font-bold">
               <motion.div
-                animate={{ rotate: [0, 5, 0, -5, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                animate={{ rotate: [0, 15, 0, -15, 0] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="relative"
               >
-                <Languages className="h-5 w-5 text-primary" />
+                <Languages className="h-6 w-6 text-primary" />
+                <motion.div 
+                  className="absolute -top-1 -right-1 h-2 w-2 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.5, 1],
+                    opacity: [0.7, 1, 0.7]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <span className={`block h-2 w-2 rounded-full ${theme.pulseColor}`}></span>
+                </motion.div>
               </motion.div>
               {getCardTitle()}
+              <motion.div
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="ml-2"
+              >
+                <Sparkles className="h-5 w-5 text-yellow-400" />
+              </motion.div>
             </CardTitle>
           </CardHeader>
+          
           <CardContent className="space-y-6 p-6">
             <div className="flex flex-col space-y-2">
-              <label className="text-sm font-medium">{getLanguageLabel()}</label>
+              <label className="text-sm font-medium flex items-center gap-2">
+                {getLanguageLabel()}
+                {selectedLanguage === 'hi' && hindiVoiceFound && (
+                  <motion.span
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="text-xs bg-green-100 text-green-800 py-1 px-2 rounded-full"
+                  >
+                    ✓ हिंदी आवाज़ मिल गई
+                  </motion.span>
+                )}
+              </label>
+              
               <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                <SelectTrigger className="w-full glass border-primary/10">
+                <SelectTrigger className={`w-full border ${theme.borderColor}`}>
                   <SelectValue placeholder={selectedLanguage === 'hi' ? "भाषा चुनें" : "Select language"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
@@ -558,26 +760,43 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               </Select>
               
               {selectedLanguage === 'hi' && !hindiVoiceFound && (
-                <div className="text-xs text-amber-500 italic mt-1">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs text-amber-600 italic mt-1 p-2 bg-amber-50 rounded-md border border-amber-200"
+                >
                   हिंदी आवाज़ नहीं मिली। सर्वोत्तम अनुभव के लिए, कृपया एक हिंदी आवाज़ वाला ब्राउज़र इस्तेमाल करें।
                   <br />
                   (Hindi voice not found. For best experience, please use a browser with Hindi voice support.)
-                </div>
+                </motion.div>
               )}
             </div>
             
-            <Textarea
-              placeholder={getTextareaPlaceholder()}
-              className="min-h-[150px] resize-y glass border-primary/10 placeholder:text-muted-foreground/50"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              dir={selectedLanguage === 'hi' || selectedLanguage === 'ar' ? 'auto' : 'ltr'}
-            />
+            <div className="relative">
+              <Textarea
+                placeholder={getTextareaPlaceholder()}
+                className={`min-h-[150px] resize-y border ${theme.borderColor} placeholder:text-muted-foreground/50 ${showTranslationHint ? 'border-amber-300' : ''}`}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                dir={selectedLanguage === 'hi' || selectedLanguage === 'ar' ? 'auto' : 'ltr'}
+              />
+              
+              {showTranslationHint && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-1 text-xs text-amber-600 flex items-center gap-1"
+                >
+                  <Wand2 className="h-3 w-3" />
+                  हिंदी में अनुवाद के लिए अनुवाद बटन पर क्लिक करें
+                </motion.div>
+              )}
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 variant={isRecording ? "destructive" : "outline"}
-                className="flex-1 flex items-center justify-center gap-2 border-primary/20 hover:bg-primary/5"
+                className={`flex-1 flex items-center justify-center gap-2 ${isRecording ? "" : `border-${theme.borderColor} hover:bg-primary/5`}`}
                 onClick={toggleRecording}
               >
                 {isRecording ? (
@@ -596,7 +815,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               <Button
                 onClick={generateAudio}
                 disabled={!text.trim() || isGeneratingAudio}
-                className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                className={`flex-1 bg-gradient-to-r ${theme.buttonGradient}`}
               >
                 {isGeneratingAudio ? (
                   <div className="flex items-center gap-2">
@@ -611,7 +830,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               <Button
                 onClick={handleTranslateText}
                 variant="secondary"
-                className="flex-1 flex items-center justify-center gap-2"
+                className={`flex-1 flex items-center justify-center gap-2 ${selectedLanguage === 'hi' && needsTranslation ? 'animate-pulse' : ''}`}
                 disabled={!text.trim() || isTranslating}
               >
                 {isTranslating ? (
@@ -632,20 +851,30 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 p-4 rounded-lg glass border border-primary/10 flex flex-wrap items-center gap-4"
+                className={`mt-4 p-4 rounded-lg border ${theme.borderColor} bg-gradient-to-r ${theme.gradient} backdrop-blur-sm flex flex-wrap items-center gap-4`}
               >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={togglePlayback}
-                  className="h-10 w-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={togglePlayback}
+                    className="h-12 w-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+                  >
+                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  </Button>
+                </motion.div>
                 
                 <div className="flex-1 min-w-[180px]">
-                  <div className="h-2 bg-muted-foreground/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full" style={{ width: isPlaying ? "var(--progress, 0%)" : "0%" }} />
+                  <div className="h-3 bg-muted-foreground/20 rounded-full overflow-hidden shadow-inner">
+                    <motion.div 
+                      className="h-full bg-primary rounded-full"
+                      style={{ width: isPlaying ? "var(--progress, 0%)" : "0%" }}
+                      initial={{ width: "0%" }}
+                      animate={{ width: isPlaying ? "var(--progress, 0%)" : "0%" }}
+                    />
                   </div>
                 </div>
                 
@@ -666,6 +895,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                       max={1}
                       step={0.01}
                       onValueChange={handleVolumeChange}
+                      className="cursor-pointer"
                     />
                   </div>
                 </div>
@@ -684,9 +914,49 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               </motion.div>
             )}
 
+            {/* Hindi Text Samples */}
+            {selectedLanguage === 'hi' && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.3 }}
+                className="mt-4 p-3 rounded-lg border border-orange-200 bg-orange-50"
+              >
+                <h4 className="text-sm font-medium text-orange-800 mb-2">हिंदी नमूना वाक्य</h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    HINDI_TEXT_SAMPLES.textSample1,
+                    HINDI_TEXT_SAMPLES.textSample2,
+                    HINDI_TEXT_SAMPLES.textSample3
+                  ].map((sample, index) => (
+                    <motion.button
+                      key={index}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="text-left p-2 rounded bg-white border border-orange-100 text-sm hover:bg-orange-100 transition-colors"
+                      onClick={() => setText(sample)}
+                    >
+                      {sample}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {previousConversions.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-lg font-medium mb-3">{getRecentConversionsLabel()}</h3>
+                <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                  {getRecentConversionsLabel()}
+                  <motion.span
+                    animate={{ 
+                      rotate: [0, 5, 0, -5, 0],
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                  >
+                    <Palette className="h-4 w-4 text-primary/70" />
+                  </motion.span>
+                </h3>
                 <div className="space-y-3">
                   {previousConversions.map((conversion) => (
                     <motion.div
@@ -694,7 +964,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       whileHover={{ scale: 1.02 }}
-                      className="p-3 rounded-lg glass border border-primary/5 backdrop-blur-sm"
+                      className={`p-3 rounded-lg border ${theme.borderColor} backdrop-blur-sm shadow-sm hover:shadow-md transition-all`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 truncate text-sm" dir={conversion.language === 'hi' || conversion.language === 'ar' ? 'auto' : 'ltr'}>
@@ -702,30 +972,32 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                           {conversion.text.length > 60 ? '...' : ''}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded-full">
                             {SUPPORTED_LANGUAGES.find(l => l.code === conversion.language)?.flag}
                           </span>
                           {conversion.audioUrl && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 rounded-full"
-                              onClick={() => {
-                                setAudioUrl(conversion.audioUrl);
-                                if (audioRef.current) {
-                                  audioRef.current.src = conversion.audioUrl || '';
-                                  audioRef.current.play();
-                                  setIsPlaying(true);
-                                }
-                                
-                                // Also try using speech synthesis for immediate feedback
-                                if (conversion.language === 'hi') {
-                                  speakText(conversion.text, conversion.language);
-                                }
-                              }}
-                            >
-                              <Play className="h-3 w-3" />
-                            </Button>
+                            <motion.div whileTap={{ scale: 0.9 }}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full bg-primary/10 hover:bg-primary/20"
+                                onClick={() => {
+                                  setAudioUrl(conversion.audioUrl);
+                                  if (audioRef.current) {
+                                    audioRef.current.src = conversion.audioUrl || '';
+                                    audioRef.current.play();
+                                    setIsPlaying(true);
+                                  }
+                                  
+                                  // Also try using speech synthesis for immediate feedback
+                                  if (conversion.language === 'hi') {
+                                    speakHindiDirectly(conversion.text);
+                                  }
+                                }}
+                              >
+                                <Play className="h-3 w-3" />
+                              </Button>
+                            </motion.div>
                           )}
                         </div>
                       </div>
@@ -735,6 +1007,14 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               </div>
             )}
           </CardContent>
+          
+          <CardFooter className={`bg-gradient-to-r ${theme.gradient} p-4 text-xs text-muted-foreground`}>
+            {selectedLanguage === 'hi' ? (
+              <>टेक्स्ट को भाषण में परिवर्तित करने के लिए ऊपर दिए गए विकल्पों का उपयोग करें</>
+            ) : (
+              <>Use the options above to convert text to speech in your chosen language</>
+            )}
+          </CardFooter>
         </Card>
       </motion.div>
     </section>

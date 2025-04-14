@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
@@ -143,7 +144,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       <Header 
         language={language} 
         setLanguage={(newLang) => {
@@ -218,7 +219,7 @@ const Index = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="text-3xl font-bold"
+                    className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600"
                   >
                     {language === 'hi' ? 'ऑडियो रूपांतरण' : 'Audio Conversion'}
                   </motion.h2>
