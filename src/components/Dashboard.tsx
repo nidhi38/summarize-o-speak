@@ -1,3 +1,4 @@
+
 import { DocumentFile, AudioConversion } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +16,18 @@ import FlashcardComponent from "@/components/Flashcards";
 export interface DashboardProps {
   audioConversions: AudioConversion[];
   processedFile: DocumentFile | null;
+}
+
+// Define FlashcardSet type for the Dashboard
+interface FlashcardSet {
+  id: string;
+  title: string;
+  cards: {
+    id: string;
+    question: string;
+    answer: string;
+  }[];
+  createdAt: Date;
 }
 
 // Sample data for demonstration (would be replaced with real data in production)

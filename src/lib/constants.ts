@@ -26,6 +26,11 @@ export const SUPPORTED_LANGUAGES: Language[] = [
 
 export const DEFAULT_LANGUAGE = "en";
 
+// Helper function to check for Devanagari script (used for Hindi detection)
+export const containsDevanagariScript = (text: string): boolean => {
+  return /[\u0900-\u097F]/.test(text);
+};
+
 // Language-specific text samples for better text-to-speech
 export const HINDI_TEXT_SAMPLES = {
   welcome: "स्वागत है",
