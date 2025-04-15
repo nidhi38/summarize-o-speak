@@ -38,6 +38,13 @@ const samplePieData = [
   { name: 'References', value: 10, color: '#F59E0B' }
 ];
 
+// Books reading data for pie chart
+const booksReadData = [
+  { name: 'Completed', value: 5, color: '#10B981' }, // Green
+  { name: 'In Progress', value: 3, color: '#8B5CF6' }, // Purple
+  { name: 'To Read', value: 8, color: '#F59E0B' } // Orange
+];
+
 const sampleAIInsights = [
   "The document shows a 75% focus on technical implementation details.",
   "Sentiment analysis indicates a neutral, fact-based tone throughout.",
@@ -246,29 +253,68 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
                   Reading Progress
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {sampleReadBooks.map((book, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="p-4 rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/30 border border-indigo-100 dark:border-indigo-800/30 shadow-sm"
-                    >
-                      <h4 className="font-semibold truncate">{book.title}</h4>
-                      <p className="text-xs text-muted-foreground">{book.author}</p>
-                      <div className="mt-2 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
-                        <div 
-                          className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
-                          style={{ width: `${book.progress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-right mt-1 text-indigo-600 dark:text-indigo-400">
-                        {book.progress}% completed
-                      </p>
-                    </motion.div>
-                  ))}
+                  {/* Books read pie chart */}
+                  <div className="md:col-span-1">
+                    <h3 className="text-center font-medium mb-2">Books Summary</h3>
+                    <div className="h-64">
+                      <ChartContainer 
+                        config={{
+                          completed: { theme: { light: "#10B981", dark: "#10B981" } },
+                          inProgress: { theme: { light: "#8B5CF6", dark: "#8B5CF6" } },
+                          toRead: { theme: { light: "#F59E0B", dark: "#F59E0B" } }
+                        }}
+                      >
+                        <ReChartPieChart>
+                          <ChartTooltip
+                            content={<ChartTooltipContent />}
+                          />
+                          <Pie
+                            data={booksReadData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="value"
+                            nameKey="name"
+                            label
+                          >
+                            {booksReadData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Legend />
+                        </ReChartPieChart>
+                      </ChartContainer>
+                    </div>
+                  </div>
+
+                  {/* Books progress bars */}
+                  <div className="md:col-span-2 flex flex-col justify-center space-y-4">
+                    {sampleReadBooks.map((book, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="p-4 rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/30 border border-indigo-100 dark:border-indigo-800/30 shadow-sm"
+                      >
+                        <h4 className="font-semibold truncate">{book.title}</h4>
+                        <p className="text-xs text-muted-foreground">{book.author}</p>
+                        <div className="mt-2 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
+                          <div 
+                            className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
+                            style={{ width: `${book.progress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-right mt-1 text-indigo-600 dark:text-indigo-400">
+                          {book.progress}% completed
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
