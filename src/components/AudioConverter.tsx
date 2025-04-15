@@ -312,21 +312,24 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       let textToConvert = text;
       const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
       
-      if (selectedLanguage === 'hi' && needsTranslation) {
-        const translationMessage = "अंग्रेजी से हिंदी में अनुवाद किया जा रहा है...";
+      const needsTranslation = selectedLanguage !== 'en' && !textContainsTargetLanguageChars(text, selectedLanguage);
+      
+      if (needsTranslation) {
+        const translationMessage = selectedLanguage === 'hi' ? 
+          "अंग्रेजी से हिंदी में अनुवाद किया जा रहा है..." : 
+          `Translating to ${languageName}...`;
         
         toast({
-          title: "अनुवाद हो रहा है",
+          title: selectedLanguage === 'hi' ? "अनुवाद हो रहा है" : "Translating",
           description: translationMessage,
         });
         
-        const translationResponse = await aiTranslateText(text, 'hi');
+        const translationResponse = await aiTranslateText(text, selectedLanguage);
         if (translationResponse) {
           textToConvert = translationResponse.translatedText;
-          console.log("Translated text for TTS:", textToConvert);
+          console.log(`Translated text for TTS (${selectedLanguage}):`, textToConvert);
           
           setText(textToConvert);
-          setNeedsTranslation(false);
         }
       }
 
@@ -383,7 +386,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         });
 
         if (selectedLanguage !== 'hi') {
-          speakText(text, selectedLanguage);
+          speakText(textToConvert, selectedLanguage);
         }
       }
     } catch (error) {
@@ -401,7 +404,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       setIsGeneratingAudio(false);
     }
   };
-  
+
   const speakHindiDirectly = (textToSpeak: string): boolean => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -430,7 +433,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     }
     return false;
   };
-  
+
   const speakText = (textToSpeak: string, language: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -452,7 +455,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       }
     }
   };
-  
+
   const setVoiceAndSpeak = (utterance: SpeechSynthesisUtterance, voices: SpeechSynthesisVoice[], langCode: string) => {
     let preferredVoice = null;
     
@@ -480,7 +483,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     console.log(`Speaking in ${langCode} using voice:`, preferredVoice?.name || 'default voice');
     window.speechSynthesis.speak(utterance);
   };
-  
+
   const togglePlayback = () => {
     if (!audioRef.current || !audioUrl) return;
     
@@ -499,7 +502,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     
     setIsPlaying(!isPlaying);
   };
-  
+
   const handleAudioEnded = () => {
     setIsPlaying(false);
   };
@@ -564,14 +567,14 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       setIsTranslating(false);
     }
   };
-  
+
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !isMuted;
     }
     setIsMuted(!isMuted);
   };
-  
+
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
@@ -640,6 +643,30 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   
   const theme = getDesignTheme();
   
+  const textContainsTargetLanguageChars = (text: string, language: string): boolean => {
+    if (language === 'hi') {
+      return containsDevanagariScript(text);
+    }
+    if (language === 'ar') {
+      return /[\u0600-\u06FF]/.test(text); // Arabic script
+    }
+    if (language === 'zh') {
+      return /[\u4E00-\u9FFF]/.test(text); // Chinese characters
+    }
+    if (language === 'ja') {
+      return /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]/.test(text); // Japanese scripts
+    }
+    if (language === 'ko') {
+      return /[\uAC00-\uD7AF\u1100-\u11FF]/.test(text); // Korean Hangul
+    }
+    if (language === 'ru') {
+      return /[\u0400-\u04FF]/.test(text); // Cyrillic script
+    }
+    
+    // For other languages, we'll assume English or similar script
+    return true;
+  };
+
   return (
     <section className="w-full max-w-4xl mx-auto mt-12 px-4 mb-20">
       <motion.div

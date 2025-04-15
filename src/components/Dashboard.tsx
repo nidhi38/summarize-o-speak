@@ -1,4 +1,3 @@
-
 import { DocumentFile, AudioConversion } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +46,39 @@ const sampleFlashcardSet = {
     { id: "2", question: "What technology is primarily discussed?", answer: "Distributed systems and microservices architecture." },
     { id: "3", question: "What is the recommended approach for deployment?", answer: "Containerization using Docker with Kubernetes orchestration." }
   ]
+};
+
+const mockFlashcards: FlashcardSet = {
+  id: crypto.randomUUID(),
+  title: "Document Study Set",
+  cards: [
+    {
+      id: crypto.randomUUID(),
+      question: "What is the main focus of the document?",
+      answer: "The document primarily focuses on innovation in technology."
+    },
+    {
+      id: crypto.randomUUID(),
+      question: "What evidence supports the main argument?",
+      answer: "Several case studies from industry leaders demonstrate successful implementations."
+    },
+    {
+      id: crypto.randomUUID(),
+      question: "What future trends are predicted?",
+      answer: "Continued growth in adoption and new applications in various sectors."
+    },
+    {
+      id: crypto.randomUUID(),
+      question: "What challenges are mentioned?",
+      answer: "Challenges in adoption, implementation costs, and training requirements."
+    },
+    {
+      id: crypto.randomUUID(),
+      question: "What framework does the author propose?",
+      answer: "A comprehensive framework for addressing implementation challenges that focuses on stakeholder engagement and phased deployment."
+    }
+  ],
+  createdAt: new Date(),
 };
 
 const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
@@ -353,7 +385,7 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
 
           <TabsContent value="flashcards" className="space-y-6">
             <Card className="glass backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 border border-white/20 shadow-xl hover:shadow-violet-200/20 dark:hover:shadow-violet-900/20 transition-all duration-300 p-4">
-              <FlashcardComponent flashcardSet={sampleFlashcardSet} />
+              <FlashcardComponent flashcardSet={mockFlashcards} />
             </Card>
           </TabsContent>
         </Tabs>

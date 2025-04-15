@@ -26,7 +26,7 @@ export const SUPPORTED_LANGUAGES: Language[] = [
 
 export const DEFAULT_LANGUAGE = "en";
 
-// Hindi translation helpers for better text-to-speech
+// Language-specific text samples for better text-to-speech
 export const HINDI_TEXT_SAMPLES = {
   welcome: "स्वागत है",
   hello: "नमस्ते",
@@ -82,4 +82,38 @@ export const HINDI_TEXT_SAMPLES = {
   createdOn: "बनाया गया",
   today: "आज",
   yesterday: "कल",
+};
+
+// Adding sample text for other languages to help with translation and TTS
+export const LANGUAGE_SAMPLES = {
+  es: {
+    textSample1: "Esta es una frase de ejemplo en español",
+    textSample2: "El español es uno de los idiomas más hablados del mundo",
+    textSample3: "Me gusta hablar en español"
+  },
+  fr: {
+    textSample1: "C'est une phrase d'exemple en français",
+    textSample2: "Le français est l'une des langues les plus parlées au monde",
+    textSample3: "J'aime parler en français"
+  },
+  de: {
+    textSample1: "Dies ist ein Beispielsatz auf Deutsch",
+    textSample2: "Deutsch ist eine der meistgesprochenen Sprachen in Europa",
+    textSample3: "Ich spreche gerne Deutsch"
+  },
+  zh: {
+    textSample1: "这是一个中文示例句子",
+    textSample2: "中文是世界上使用最广泛的语言之一",
+    textSample3: "我喜欢说中文"
+  },
+  ja: {
+    textSample1: "これは日本語のサンプル文です",
+    textSample2: "日本語は日本の主要言語です",
+    textSample3: "私は日本語を話すのが好きです"
+  },
+  ru: {
+    textSample1: "Это пример предложения на русском языке",
+    textSample2: "Русский является одним из основных языков России",
+    textSample3: "Мне нравится говорить по-русски"
+  }
 };

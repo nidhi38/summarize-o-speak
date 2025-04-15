@@ -291,7 +291,7 @@ export const useAIService = () => {
       } else {
         // Mock response for other languages
         const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
-        translatedText = `[This is a simulated translation to ${targetLanguageName}]\n\n${text}`;
+        translatedText = `[${targetLanguageName} translation] ${text}`;
       }
       
       const mockTranslation: TranslationResponse = {
