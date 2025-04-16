@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mic, Square, Play, Pause, Volume2, VolumeX, Languages, Sparkles, Wand2, Palette } from "lucide-react";
@@ -16,6 +17,13 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useAIService } from "@/lib/AIService";
+import { 
+  containsDevanagariScript, 
+  containsLanguageSpecificChars, 
+  formatTime, 
+  isSpeechRecognitionSupported,
+  isTextToSpeechSupported
+} from "@/lib/utils";
 
 interface WindowWithSpeechRecognition extends Window {
   SpeechRecognition?: any;
@@ -42,6 +50,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   const [voicesList, setVoicesList] = useState<SpeechSynthesisVoice[]>([]);
   const [hindiVoiceFound, setHindiVoiceFound] = useState(false);
   const [needsTranslation, setNeedsTranslation] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(true);
+  const [textToSpeechSupported, setTextToSpeechSupported] = useState(true);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
@@ -59,14 +71,28 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
         setPreviousConversions(processedConversions.slice(0, 5));
       } catch (e) {
         console.error("Error loading stored conversions:", e);
+        toast({
+          variant: "destructive",
+          title: "Error loading conversions",
+          description: "Could not load previous conversions."
+        });
       }
     }
 
-    const windowWithSpeech = window as WindowWithSpeechRecognition;
-    if (windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition) {
+    // Check for speech recognition support
+    const speechSupported = isSpeechRecognitionSupported();
+    setSpeechRecognitionSupported(speechSupported);
+    
+    if (speechSupported) {
       setupSpeechRecognition();
+    } else {
+      console.warn("Speech recognition not supported in this browser");
     }
 
+    // Check for text-to-speech support
+    const ttsSupported = isTextToSpeechSupported();
+    setTextToSpeechSupported(ttsSupported);
+    
     setSelectedLanguage(language || DEFAULT_LANGUAGE);
 
     return () => {
@@ -112,10 +138,41 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
 
   useEffect(() => {
     if (selectedLanguage === 'hi') {
-      const containsHindiChars = /[\u0900-\u097F]/.test(text);
+      const containsHindiChars = containsDevanagariScript(text);
       setNeedsTranslation(!containsHindiChars && text.trim().length > 0);
+    } else {
+      // Check for other languages too
+      const containsTargetLangChars = containsLanguageSpecificChars(text, selectedLanguage);
+      setNeedsTranslation(!containsTargetLangChars && text.trim().length > 0);
     }
   }, [text, selectedLanguage]);
+
+  // Set up audio time tracking
+  useEffect(() => {
+    if (audioRef.current) {
+      const handleTimeUpdate = () => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+      };
+      
+      const handleDurationChange = () => {
+        if (audioRef.current) {
+          setDuration(audioRef.current.duration);
+        }
+      };
+      
+      audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
+      audioRef.current.addEventListener("durationchange", handleDurationChange);
+      
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener("timeupdate", handleTimeUpdate);
+          audioRef.current.removeEventListener("durationchange", handleDurationChange);
+        }
+      };
+    }
+  }, [audioUrl]);
 
   const waitForVoices = () => {
     return new Promise<SpeechSynthesisVoice[]>((resolve, reject) => {
@@ -149,28 +206,6 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     });
   };
 
-  const loadVoices = () => {
-    if ('speechSynthesis' in window) {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        setVoicesList(voices);
-        const hindiVoice = findHindiVoice(voices);
-        setHindiVoiceFound(!!hindiVoice);
-        console.log("Loaded voices:", voices.map(v => `${v.name} (${v.lang})`).join(', '));
-        console.log("Hindi voice found:", hindiVoice ? hindiVoice.name : "None");
-      } else {
-        window.speechSynthesis.onvoiceschanged = () => {
-          const updatedVoices = window.speechSynthesis.getVoices();
-          setVoicesList(updatedVoices);
-          const hindiVoice = findHindiVoice(updatedVoices);
-          setHindiVoiceFound(!!hindiVoice);
-          console.log("Updated voices:", updatedVoices.map(v => `${v.name} (${v.lang})`).join(', '));
-          console.log("Hindi voice found:", hindiVoice ? hindiVoice.name : "None");
-        };
-      }
-    }
-  };
-
   const findHindiVoice = (voices: SpeechSynthesisVoice[]) => {
     const naturalHindiVoice = voices.find(voice => 
       (voice.lang === 'hi-IN' || voice.lang.startsWith('hi')) &&
@@ -190,41 +225,49 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   };
 
   const setupSpeechRecognition = () => {
-    const windowWithSpeech = window as WindowWithSpeechRecognition;
-    const SpeechRecognition = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    try {
+      const windowWithSpeech = window as WindowWithSpeechRecognition;
+      const SpeechRecognition = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        setSpeechRecognitionSupported(false);
+        return;
+      }
 
-    const recognitionInstance = new SpeechRecognition();
-    recognitionInstance.continuous = true;
-    recognitionInstance.interimResults = true;
-    
-    recognitionInstance.lang = selectedLanguage === 'hi' ? 'hi-IN' : selectedLanguage;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
+      
+      recognitionInstance.lang = selectedLanguage === 'hi' ? 'hi-IN' : selectedLanguage;
 
-    recognitionInstance.onresult = (event: any) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          transcript += event.results[i][0].transcript;
+      recognitionInstance.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            transcript += event.results[i][0].transcript;
+          }
         }
-      }
-      if (transcript) {
-        setText(prev => prev + ' ' + transcript);
-      }
-    };
+        if (transcript) {
+          setText(prev => prev + ' ' + transcript);
+        }
+      };
 
-    recognitionInstance.onerror = (event: any) => {
-      console.error('Speech recognition error', event);
-      toast({
-        title: selectedLanguage === 'hi' ? "मान्यता त्रुटि" : "Recognition Error",
-        description: selectedLanguage === 'hi' ? 
-          "भाषण पहचान के साथ एक समस्या थी।" : 
-          "There was a problem with speech recognition.",
-        variant: "destructive",
-      });
-      setIsRecording(false);
-    };
+      recognitionInstance.onerror = (event: any) => {
+        console.error('Speech recognition error', event);
+        toast({
+          title: selectedLanguage === 'hi' ? "मान्यता त्रुटि" : "Recognition Error",
+          description: selectedLanguage === 'hi' ? 
+            "भाषण पहचान के साथ एक समस्या थी।" : 
+            "There was a problem with speech recognition.",
+          variant: "destructive",
+        });
+        setIsRecording(false);
+      };
 
-    setRecognition(recognitionInstance);
+      setRecognition(recognitionInstance);
+    } catch (error) {
+      console.error("Error setting up speech recognition:", error);
+      setSpeechRecognitionSupported(false);
+    }
   };
 
   useEffect(() => {
@@ -242,6 +285,15 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   };
   
   const startRecording = async () => {
+    if (!speechRecognitionSupported) {
+      toast({
+        title: "Speech Recognition Not Supported",
+        description: "Your browser doesn't support speech recognition. Try using a modern browser like Chrome.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       if (!recognition) {
         setupSpeechRecognition();
@@ -306,13 +358,22 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
       return;
     }
     
+    if (!textToSpeechSupported) {
+      toast({
+        title: "Text-to-Speech Not Supported",
+        description: "Your browser doesn't support text-to-speech capabilities.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsGeneratingAudio(true);
     
     try {
       let textToConvert = text;
       const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'selected language';
       
-      const needsTranslation = selectedLanguage !== 'en' && !textContainsTargetLanguageChars(text, selectedLanguage);
+      const needsTranslation = !containsLanguageSpecificChars(text, selectedLanguage);
       
       if (needsTranslation) {
         const translationMessage = selectedLanguage === 'hi' ? 
@@ -324,12 +385,21 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
           description: translationMessage,
         });
         
-        const translationResponse = await aiTranslateText(text, selectedLanguage);
-        if (translationResponse) {
-          textToConvert = translationResponse.translatedText;
-          console.log(`Translated text for TTS (${selectedLanguage}):`, textToConvert);
-          
-          setText(textToConvert);
+        try {
+          const translationResponse = await aiTranslateText(text, selectedLanguage);
+          if (translationResponse) {
+            textToConvert = translationResponse.translatedText;
+            console.log(`Translated text for TTS (${selectedLanguage}):`, textToConvert);
+            
+            setText(textToConvert);
+          }
+        } catch (translationError) {
+          console.error("Translation error:", translationError);
+          toast({
+            title: "Translation Error",
+            description: "Failed to translate text. Proceeding with original text.",
+            variant: "destructive",
+          });
         }
       }
 
@@ -584,6 +654,14 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     }
   };
 
+  const seekAudio = (value: number[]) => {
+    const seekTime = value[0];
+    if (audioRef.current && !isNaN(seekTime)) {
+      audioRef.current.currentTime = seekTime;
+      setCurrentTime(seekTime);
+    }
+  };
+
   const getButtonLabel = (action: string) => {
     if (selectedLanguage === 'hi') {
       switch(action) {
@@ -618,7 +696,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
     return selectedLanguage === 'hi' ? "हाल के रूपांतरण" : "Recent Conversions";
   };
   
-  const showTranslationHint = selectedLanguage === 'hi' && needsTranslation;
+  const showTranslationHint = selectedLanguage !== 'en' && needsTranslation;
   
   const getDesignTheme = () => {
     switch(selectedLanguage) {
@@ -629,6 +707,30 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
           buttonGradient: "from-orange-500 to-pink-500",
           secondaryColor: "bg-purple-100 text-purple-800 hover:bg-purple-200",
           pulseColor: "bg-orange-500"
+        };
+      case 'ar':
+        return {
+          gradient: "from-emerald-500/30 via-teal-500/30 to-cyan-500/30",
+          borderColor: "border-emerald-300",
+          buttonGradient: "from-emerald-500 to-teal-500",
+          secondaryColor: "bg-teal-100 text-teal-800 hover:bg-teal-200",
+          pulseColor: "bg-emerald-500"
+        };
+      case 'zh':
+        return {
+          gradient: "from-red-500/30 via-rose-500/30 to-pink-500/30",
+          borderColor: "border-red-300",
+          buttonGradient: "from-red-500 to-rose-500",
+          secondaryColor: "bg-rose-100 text-rose-800 hover:bg-rose-200",
+          pulseColor: "bg-red-500"
+        };
+      case 'fr':
+        return {
+          gradient: "from-blue-500/30 via-indigo-500/30 to-violet-500/30",
+          borderColor: "border-blue-300",
+          buttonGradient: "from-blue-500 to-indigo-500",
+          secondaryColor: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200",
+          pulseColor: "bg-blue-500"
         };
       default:
         return {
@@ -642,30 +744,6 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
   };
   
   const theme = getDesignTheme();
-  
-  const textContainsTargetLanguageChars = (text: string, language: string): boolean => {
-    if (language === 'hi') {
-      return containsDevanagariScript(text);
-    }
-    if (language === 'ar') {
-      return /[\u0600-\u06FF]/.test(text); // Arabic script
-    }
-    if (language === 'zh') {
-      return /[\u4E00-\u9FFF]/.test(text); // Chinese characters
-    }
-    if (language === 'ja') {
-      return /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]/.test(text); // Japanese scripts
-    }
-    if (language === 'ko') {
-      return /[\uAC00-\uD7AF\u1100-\u11FF]/.test(text); // Korean Hangul
-    }
-    if (language === 'ru') {
-      return /[\u0400-\u04FF]/.test(text); // Cyrillic script
-    }
-    
-    // For other languages, we'll assume English or similar script
-    return true;
-  };
 
   return (
     <section className="w-full max-w-4xl mx-auto mt-12 px-4 mb-20">
@@ -744,6 +822,18 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                   (Hindi voice not found. For best experience, please use a browser with Hindi voice support.)
                 </motion.div>
               )}
+              
+              {!speechRecognitionSupported && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs text-red-600 italic mt-1 p-2 bg-red-50 rounded-md border border-red-200"
+                >
+                  {selectedLanguage === 'hi' 
+                    ? "आपका ब्राउज़र भाषण पहचान का समर्थन नहीं करता है। कृपया क्रोम जैसे आधुनिक ब्राउज़र का उपयोग करें।"
+                    : "Your browser doesn't support speech recognition. Please use a modern browser like Chrome."}
+                </motion.div>
+              )}
             </div>
             
             <div className="relative">
@@ -752,7 +842,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                 className={`min-h-[150px] resize-y border ${theme.borderColor} placeholder:text-muted-foreground/50 ${showTranslationHint ? 'border-amber-300' : ''}`}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                dir={selectedLanguage === 'hi' || selectedLanguage === 'ar' ? 'auto' : 'ltr'}
+                dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
               />
               
               {showTranslationHint && (
@@ -762,7 +852,12 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                   className="mt-1 text-xs text-amber-600 flex items-center gap-1"
                 >
                   <Wand2 className="h-3 w-3" />
-                  हिंदी में अनुवाद के लिए अनुवाद बटन पर क्लिक करें
+                  {selectedLanguage === 'hi' 
+                    ? "हिंदी में अनुवाद के लिए अनुवाद बटन पर क्लिक करें"
+                    : `Click translate button to translate to ${
+                        SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || selectedLanguage
+                      }`
+                  }
                 </motion.div>
               )}
             </div>
@@ -772,6 +867,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                 variant={isRecording ? "destructive" : "outline"}
                 className={`flex-1 flex items-center justify-center gap-2 ${isRecording ? "" : `border-${theme.borderColor} hover:bg-primary/5`}`}
                 onClick={toggleRecording}
+                disabled={!speechRecognitionSupported}
               >
                 {isRecording ? (
                   <>
@@ -788,7 +884,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               
               <Button
                 onClick={generateAudio}
-                disabled={!text.trim() || isGeneratingAudio}
+                disabled={!text.trim() || isGeneratingAudio || !textToSpeechSupported}
                 className={`flex-1 bg-gradient-to-r ${theme.buttonGradient}`}
               >
                 {isGeneratingAudio ? (
@@ -804,7 +900,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               <Button
                 onClick={handleTranslateText}
                 variant="secondary"
-                className={`flex-1 flex items-center justify-center gap-2 ${selectedLanguage === 'hi' && needsTranslation ? 'animate-pulse' : ''}`}
+                className={`flex-1 flex items-center justify-center gap-2 ${showTranslationHint ? 'animate-pulse' : ''}`}
                 disabled={!text.trim() || isTranslating}
               >
                 {isTranslating ? (
@@ -825,52 +921,72 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`mt-4 p-4 rounded-lg border ${theme.borderColor} bg-gradient-to-r ${theme.gradient} backdrop-blur-sm flex flex-wrap items-center gap-4`}
+                className={`mt-4 p-4 rounded-lg border ${theme.borderColor} bg-gradient-to-r ${theme.gradient} backdrop-blur-sm`}
               >
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={togglePlayback}
-                    className="h-12 w-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+                <div className="flex flex-wrap items-center gap-4">
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                  </Button>
-                </motion.div>
-                
-                <div className="flex-1 min-w-[180px]">
-                  <div className="h-3 bg-muted-foreground/20 rounded-full overflow-hidden shadow-inner">
-                    <motion.div 
-                      className="h-full bg-primary rounded-full"
-                      style={{ width: isPlaying ? "var(--progress, 0%)" : "0%" }}
-                      initial={{ width: "0%" }}
-                      animate={{ width: isPlaying ? "var(--progress, 0%)" : "0%" }}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleMute}
-                    className="h-8 w-8 rounded-full"
-                  >
-                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={togglePlayback}
+                      className="h-12 w-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+                    >
+                      {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                    </Button>
+                  </motion.div>
                   
-                  <div className="w-24">
-                    <Slider
-                      value={[volume]}
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      onValueChange={handleVolumeChange}
-                      className="cursor-pointer"
-                    />
+                  <div className="flex-1 min-w-[180px] space-y-1">
+                    <div 
+                      className="h-3 bg-muted-foreground/20 rounded-full overflow-hidden shadow-inner cursor-pointer"
+                      onClick={(e) => {
+                        if (!audioRef.current || !duration) return;
+                        
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const pos = (e.clientX - rect.left) / rect.width;
+                        const newTime = pos * duration;
+                        
+                        seekAudio([newTime]);
+                        
+                        if (!isPlaying) {
+                          audioRef.current.play().catch(() => {});
+                          setIsPlaying(true);
+                        }
+                      }}
+                    >
+                      <motion.div 
+                        className="h-full bg-primary rounded-full"
+                        style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{formatTime(currentTime)}</span>
+                      <span>{!isNaN(duration) ? formatTime(duration) : "--:--"}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleMute}
+                      className="h-8 w-8 rounded-full"
+                    >
+                      {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                    </Button>
+                    
+                    <div className="w-24">
+                      <Slider
+                        value={[volume]}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        onValueChange={handleVolumeChange}
+                        className="cursor-pointer"
+                      />
+                    </div>
                   </div>
                 </div>
                 
@@ -880,8 +996,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                   onEnded={handleAudioEnded}
                   onTimeUpdate={() => {
                     if (!audioRef.current) return;
-                    const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-                    document.documentElement.style.setProperty("--progress", `${progress}%`);
+                    setCurrentTime(audioRef.current.currentTime);
                   }}
                   className="hidden"
                 />
@@ -916,6 +1031,40 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
               </motion.div>
             )}
 
+            {selectedLanguage !== 'hi' && selectedLanguage !== 'en' && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.3 }}
+                className={`mt-4 p-3 rounded-lg border border-${theme.borderColor} bg-${theme.gradient}`}
+              >
+                <h4 className="text-sm font-medium mb-2">
+                  {`${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || ''} Demo Phrases`}
+                </h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {/* Sample texts for other languages (could be expanded in constants.ts) */}
+                  {[
+                    `Demo phrase 1 in ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || selectedLanguage}`,
+                    `Demo phrase 2 in ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || selectedLanguage}`,
+                    `Demo phrase 3 in ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || selectedLanguage}`
+                  ].map((sample, index) => (
+                    <motion.button
+                      key={index}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="text-left p-2 rounded bg-white border text-sm hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        setText(sample);
+                        handleTranslateText();
+                      }}
+                    >
+                      {sample}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {previousConversions.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
@@ -940,7 +1089,7 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                       className={`p-3 rounded-lg border ${theme.borderColor} backdrop-blur-sm shadow-sm hover:shadow-md transition-all`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex-1 truncate text-sm" dir={conversion.language === 'hi' || conversion.language === 'ar' ? 'auto' : 'ltr'}>
+                        <div className="flex-1 truncate text-sm" dir={conversion.language === 'ar' ? 'rtl' : 'ltr'}>
                           {conversion.text.substring(0, 60)}
                           {conversion.text.length > 60 ? '...' : ''}
                         </div>
@@ -956,9 +1105,10 @@ const AudioConverter = ({ language, onSaveAudioConversion }: AudioConverterProps
                                 className="h-7 w-7 rounded-full bg-primary/10 hover:bg-primary/20"
                                 onClick={() => {
                                   setAudioUrl(conversion.audioUrl);
+                                  setText(conversion.text);
                                   if (audioRef.current) {
                                     audioRef.current.src = conversion.audioUrl || '';
-                                    audioRef.current.play();
+                                    audioRef.current.play().catch(() => {});
                                     setIsPlaying(true);
                                   }
                                   
