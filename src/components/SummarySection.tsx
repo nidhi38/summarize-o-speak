@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Download, Headphones, Languages, Brain, BookOpen, ArrowRight, ChevronDown, ChevronUp, Clock, BarChart2, FileCheck, ListChecks, Book } from "lucide-react";
@@ -818,4 +819,50 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                               rotate: [0, 5, 0, -5, 0]
                             }}
                             transition={{ duration: 3, repeat: Infinity }}
-                            className
+                            className="flex justify-center mb-4"
+                          >
+                            <Brain className="h-12 w-12 text-primary/40" />
+                          </motion.div>
+                          <h3 className="text-lg font-medium mb-2">No AI Summary Yet</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Generate an enhanced AI summary to get key takeaways from your document
+                          </p>
+                          <Button 
+                            onClick={handleAISummarize}
+                            disabled={isLoading.summary}
+                            className="bg-primary/80 hover:bg-primary"
+                          >
+                            {isLoading.summary ? (
+                              <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2" />
+                            ) : null}
+                            Generate Now
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="flashcards" className="pt-4">
+                    {/* Flashcard content would go here */}
+                    <div className="min-h-[300px] flex items-center justify-center">
+                      <p>Flashcard content would be displayed here.</p>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="insights" className="pt-4">
+                    {/* Insights content would go here */}
+                    <div className="min-h-[300px] flex items-center justify-center">
+                      <p>Insights content would be displayed here.</p>
+                    </div>
+                  </TabsContent>
+                </motion.div>
+              </AnimatePresence>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.section>
+  );
+};
+
+export default SummarySection;
