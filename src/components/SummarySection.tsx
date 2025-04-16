@@ -1,24 +1,33 @@
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Download, Headphones, Languages, Brain, BookOpen, ArrowRight, ChevronDown, ChevronUp, Clock, BarChart2, FileCheck, ListChecks, Book } from "lucide-react";
 import { DocumentFile } from "@/lib/types";
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/constants";
 import { useToast } from "@/components/ui/use-toast";
-import { useAIService, SummaryResponse, FlashcardSet } from "@/lib/AIService";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Progress } from "@/components/ui/progress";
-import Flashcards from "@/components/Flashcards";
+import { ProgressBar } from "@/components/ProgressBar";
+import FlashcardComponent, { FlashcardSet, Flashcard } from "@/components/Flashcards";
+import { formatFileSize, delay, handleApiError } from "@/lib/utils";
+
+// Define types for AI responses
+export interface SummaryResponse {
+  summary: string;
+  keyTakeaways: string[];
+  topics: string[];
+}
+
+interface AIService {
+  translateText: (text: string, targetLanguage: string) => Promise<any>;
+  textToSpeech: (text: string, language: string) => Promise<string>;
+  speechToText: (audioBlob: Blob, language: string) => Promise<any>;
+  summarizeText?: (text: string) => Promise<SummaryResponse>;
+  generateFlashcards?: (text: string) => Promise<FlashcardSet>;
+  getInsights?: (text: string) => Promise<any>;
+}
 
 interface SummarySectionProps {
   file: DocumentFile | null;
@@ -33,91 +42,288 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
   const [flashcards, setFlashcards] = useState<FlashcardSet | null>(null);
   const [activeTab, setActiveTab] = useState("summary");
   const [expandedView, setExpandedView] = useState(false);
-  const { toast } = useToast();
-  const { summarizeText, generateFlashcards, getInsights } = useAIService();
+  const [isLoading, setIsLoading] = useState<{[key: string]: boolean}>({
+    translate: false,
+    tts: false,
+    summary: false,
+    flashcards: false,
+    insights: false
+  });
+  const [error, setError] = useState<string | null>(null);
 
+  const { toast } = useToast();
+  
+  // Mock AI service - in a real app, this would be imported from a service file
+  const mockAIService: AIService = {
+    translateText: async (text, lang) => ({translated: text, language: lang}),
+    textToSpeech: async (text, lang) => "audio-url",
+    speechToText: async (blob, lang) => ({text: "transcribed text", language: lang}),
+    
+    // Mock implementations of the missing methods
+    summarizeText: async (text) => {
+      await delay(1500); // Simulate API delay
+      return {
+        summary: `Enhanced AI summary of: ${text.slice(0, 100)}...`,
+        keyTakeaways: [
+          "The document discusses key technological innovations",
+          "It addresses implementation challenges in various contexts",
+          "Several case studies are presented to support the findings",
+          "Recommendations are made for future applications"
+        ],
+        topics: ["Technology", "Innovation", "Implementation", "Research"]
+      };
+    },
+    
+    generateFlashcards: async (text) => {
+      await delay(1500); // Simulate API delay
+      return {
+        id: crypto.randomUUID(),
+        title: "Study Flashcards",
+        cards: [
+          {
+            id: crypto.randomUUID(),
+            question: "What is the main topic of the document?",
+            answer: "Technological innovation and implementation strategies."
+          },
+          {
+            id: crypto.randomUUID(),
+            question: "What challenges are addressed?",
+            answer: "Implementation barriers in various organizational contexts."
+          },
+          {
+            id: crypto.randomUUID(),
+            question: "What evidence supports the findings?",
+            answer: "Case studies from several industry sectors."
+          },
+          {
+            id: crypto.randomUUID(),
+            question: "What future applications are suggested?",
+            answer: "Integration with existing systems and expansion to new domains."
+          }
+        ]
+      };
+    },
+    
+    getInsights: async (text) => {
+      await delay(1500); // Simulate API delay
+      return {
+        topics: ["Technology", "Innovation", "Research", "Implementation"],
+        sentiment: "Neutral",
+        complexity: 72,
+        readingLevel: "College",
+        wordCount: text.split(/\s+/).length,
+        readTime: Math.round(text.split(/\s+/).length / 200) // Avg reading speed of 200 wpm
+      };
+    }
+  };
+  
   if (!file) return null;
 
   const handleCopy = () => {
     if (!file.summary) return;
     
-    navigator.clipboard.writeText(file.summary);
-    setCopied(true);
-    
-    setTimeout(() => setCopied(false), 2000);
-    
-    toast({
-      title: "Copied to clipboard",
-      description: "Summary copied to clipboard successfully",
-    });
+    try {
+      navigator.clipboard.writeText(file.summary);
+      setCopied(true);
+      
+      setTimeout(() => setCopied(false), 2000);
+      
+      toast({
+        title: "Copied to clipboard",
+        description: "Summary copied to clipboard successfully",
+      });
+    } catch (error) {
+      console.error("Copy failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Copy failed",
+        description: "Could not copy to clipboard. Please try again.",
+      });
+    }
   };
 
   const handleDownload = () => {
     if (!file.summary) return;
     
-    const blob = new Blob([file.summary], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    
-    a.href = url;
-    a.download = `${file.name.split(".")[0]}-summary.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Summary downloaded",
-      description: "Your summary has been downloaded successfully",
-    });
+    try {
+      const blob = new Blob([file.summary], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      
+      a.href = url;
+      a.download = `${file.name.split(".")[0]}-summary.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Summary downloaded",
+        description: "Your summary has been downloaded successfully",
+      });
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: "Could not download summary. Please try again.",
+      });
+    }
   };
 
-  const handleTranslate = () => {
+  const handleTranslate = async () => {
     if (!file.summary) return;
-    onTranslate(file.summary, targetLanguage);
+    
+    try {
+      setIsLoading({...isLoading, translate: true});
+      setError(null);
+      onTranslate(file.summary, targetLanguage);
+      
+      toast({
+        title: "Translation in progress",
+        description: "Your summary is being translated...",
+      });
+    } catch (error) {
+      setError(handleApiError(error));
+      toast({
+        variant: "destructive",
+        title: "Translation failed",
+        description: "Could not translate summary. Please try again.",
+      });
+    } finally {
+      setIsLoading({...isLoading, translate: false});
+    }
   };
 
-  const handleTextToSpeech = () => {
+  const handleTextToSpeech = async () => {
     if (!file.summary) return;
-    onTextToSpeech(file.summary, targetLanguage);
+    
+    try {
+      setIsLoading({...isLoading, tts: true});
+      setError(null);
+      onTextToSpeech(file.summary, targetLanguage);
+      
+      toast({
+        title: "Audio conversion in progress",
+        description: "Your summary is being converted to speech...",
+      });
+    } catch (error) {
+      setError(handleApiError(error));
+      toast({
+        variant: "destructive",
+        title: "Text-to-speech failed",
+        description: "Could not convert text to speech. Please try again.",
+      });
+    } finally {
+      setIsLoading({...isLoading, tts: false});
+    }
   };
 
   const handleAISummarize = async () => {
     if (!file.summary) return;
     
-    toast({
-      title: "Generating AI Summary",
-      description: "Please wait while we process your document...",
-    });
-    
-    const summary = await summarizeText(file.summary);
-    setAiSummary(summary);
-    setActiveTab("ai-summary");
+    try {
+      setIsLoading({...isLoading, summary: true});
+      setError(null);
+      
+      toast({
+        title: "Generating AI Summary",
+        description: "Please wait while we process your document...",
+      });
+      
+      if (mockAIService.summarizeText) {
+        const summary = await mockAIService.summarizeText(file.summary);
+        setAiSummary(summary);
+        setActiveTab("ai-summary");
+        
+        toast({
+          title: "Summary generated",
+          description: "AI summary has been generated successfully",
+        });
+      } else {
+        throw new Error("Summarize function not available");
+      }
+    } catch (error) {
+      setError(handleApiError(error));
+      toast({
+        variant: "destructive",
+        title: "Summary generation failed",
+        description: "Could not generate AI summary. Please try again.",
+      });
+    } finally {
+      setIsLoading({...isLoading, summary: false});
+    }
   };
   
   const handleGenerateFlashcards = async () => {
     if (!file.summary) return;
     
-    toast({
-      title: "Creating Flashcards",
-      description: "Generating learning materials from your document...",
-    });
-    
-    const cards = await generateFlashcards(file.summary);
-    setFlashcards(cards);
-    setActiveTab("flashcards");
+    try {
+      setIsLoading({...isLoading, flashcards: true});
+      setError(null);
+      
+      toast({
+        title: "Creating Flashcards",
+        description: "Generating learning materials from your document...",
+      });
+      
+      if (mockAIService.generateFlashcards) {
+        const cards = await mockAIService.generateFlashcards(file.summary);
+        setFlashcards(cards);
+        setActiveTab("flashcards");
+        
+        toast({
+          title: "Flashcards created",
+          description: "Learning materials have been generated successfully",
+        });
+      } else {
+        throw new Error("Flashcard generation not available");
+      }
+    } catch (error) {
+      setError(handleApiError(error));
+      toast({
+        variant: "destructive",
+        title: "Flashcard generation failed",
+        description: "Could not generate flashcards. Please try again.",
+      });
+    } finally {
+      setIsLoading({...isLoading, flashcards: false});
+    }
   };
   
   const handleGenerateInsights = async () => {
     if (!file.summary) return;
     
-    toast({
-      title: "Analyzing Content",
-      description: "Generating insights from your document...",
-    });
-    
-    await getInsights(file.summary);
-    setActiveTab("insights");
+    try {
+      setIsLoading({...isLoading, insights: true});
+      setError(null);
+      
+      toast({
+        title: "Analyzing Content",
+        description: "Generating insights from your document...",
+      });
+      
+      if (mockAIService.getInsights) {
+        await mockAIService.getInsights(file.summary);
+        setActiveTab("insights");
+        
+        toast({
+          title: "Insights generated",
+          description: "Document insights have been analyzed successfully",
+        });
+      } else {
+        throw new Error("Insight generation not available");
+      }
+    } catch (error) {
+      setError(handleApiError(error));
+      toast({
+        variant: "destructive",
+        title: "Insight generation failed",
+        description: "Could not generate document insights. Please try again.",
+      });
+    } finally {
+      setIsLoading({...isLoading, insights: false});
+    }
   };
 
   const containerVariants = {
@@ -188,6 +394,16 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
       variants={containerVariants}
       className="w-full max-w-4xl mx-auto mt-12 px-4"
     >
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+      
       <motion.div variants={popUpVariants}>
         <Card className="glass hover:shadow-glass-hover transition-all duration-300 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -200,6 +416,9 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
               </CardTitle>
               <CardDescription className="mt-1">
                 {file.name} • {new Date().toLocaleDateString()}
+                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  {formatFileSize(file.size || 0)}
+                </span>
               </CardDescription>
             </motion.div>
             <div className="flex items-center space-x-2">
@@ -360,11 +579,12 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                             {Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%
                           </span>
                         </div>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%` }}
-                          transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
-                          className="h-2 bg-primary rounded-full"
+                        <ProgressBar 
+                          value={readingMetrics.timeSaved} 
+                          max={readingMetrics.estimatedReadTime}
+                          height={8}
+                          gradient={true}
+                          animate={true}
                         />
                         <p className="text-xs text-muted-foreground mt-2">
                           You're saving {readingMetrics.timeSaved} minutes by reading this summary instead of the full document.
@@ -431,9 +651,14 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                             <Button
                               variant="outline"
                               onClick={handleTranslate}
+                              disabled={isLoading.translate}
                               className="flex-1 flex items-center gap-2 glass"
                             >
-                              <Languages className="h-4 w-4" />
+                              {isLoading.translate ? (
+                                <div className="h-4 w-4 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                              ) : (
+                                <Languages className="h-4 w-4" />
+                              )}
                               Translate
                             </Button>
                           </motion.div>
@@ -441,9 +666,14 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                             <Button
                               variant="secondary"
                               onClick={handleTextToSpeech}
+                              disabled={isLoading.tts}
                               className="flex-1 flex items-center gap-2"
                             >
-                              <Headphones className="h-4 w-4" />
+                              {isLoading.tts ? (
+                                <div className="h-4 w-4 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                              ) : (
+                                <Headphones className="h-4 w-4" />
+                              )}
                               Listen
                             </Button>
                           </motion.div>
@@ -456,8 +686,16 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                           whileTap={{ scale: 0.97 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <Button onClick={handleAISummarize} className="w-full flex items-center gap-2 h-14 rounded-xl bg-gradient-to-r from-primary to-primary/80">
-                            <Brain className="h-5 w-5" />
+                          <Button 
+                            onClick={handleAISummarize} 
+                            disabled={isLoading.summary}
+                            className="w-full flex items-center gap-2 h-14 rounded-xl bg-gradient-to-r from-primary to-primary/80"
+                          >
+                            {isLoading.summary ? (
+                              <div className="h-5 w-5 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                            ) : (
+                              <Brain className="h-5 w-5" />
+                            )}
                             <span className="font-medium">Generate AI Summary</span>
                           </Button>
                         </motion.div>
@@ -466,8 +704,17 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                           whileTap={{ scale: 0.97 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <Button onClick={handleGenerateFlashcards} variant="outline" className="w-full flex items-center gap-2 h-14 rounded-xl glass">
-                            <BookOpen className="h-5 w-5" />
+                          <Button 
+                            onClick={handleGenerateFlashcards} 
+                            disabled={isLoading.flashcards}
+                            variant="outline" 
+                            className="w-full flex items-center gap-2 h-14 rounded-xl glass"
+                          >
+                            {isLoading.flashcards ? (
+                              <div className="h-5 w-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                            ) : (
+                              <BookOpen className="h-5 w-5" />
+                            )}
                             <span className="font-medium">Create Flashcards</span>
                           </Button>
                         </motion.div>
@@ -476,8 +723,17 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                           whileTap={{ scale: 0.97 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <Button onClick={handleGenerateInsights} variant="secondary" className="w-full flex items-center gap-2 h-14 rounded-xl">
-                            <BarChart2 className="h-5 w-5" />
+                          <Button 
+                            onClick={handleGenerateInsights}
+                            disabled={isLoading.insights}
+                            variant="secondary" 
+                            className="w-full flex items-center gap-2 h-14 rounded-xl"
+                          >
+                            {isLoading.insights ? (
+                              <div className="h-5 w-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                            ) : (
+                              <BarChart2 className="h-5 w-5" />
+                            )}
                             <span className="font-medium">Analyze Content</span>
                           </Button>
                         </motion.div>
@@ -562,210 +818,4 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                               rotate: [0, 5, 0, -5, 0]
                             }}
                             transition={{ duration: 3, repeat: Infinity }}
-                            className="inline-block mb-3"
-                          >
-                            <Brain className="h-12 w-12 text-primary/60" />
-                          </motion.div>
-                          <h3 className="text-xl font-medium mb-4">Generate AI Summary</h3>
-                          <p className="text-muted-foreground mb-6 max-w-md">
-                            Use advanced AI to create an enhanced summary with key takeaways and main topics
-                          </p>
-                          <Button onClick={handleAISummarize} className="px-6 bg-gradient-to-r from-primary to-primary/80">
-                            <Brain className="mr-2 h-4 w-4" />
-                            Generate Now
-                          </Button>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="flashcards" className="pt-4">
-                    {flashcards ? (
-                      <Flashcards flashcardSet={flashcards} />
-                    ) : (
-                      <motion.div 
-                        className="min-h-[300px] flex items-center justify-center"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <motion.div 
-                          whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }} 
-                          whileTap={{ scale: 0.95 }}
-                          className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-transparent text-center"
-                        >
-                          <motion.div 
-                            animate={{ 
-                              y: [0, -10, 0],
-                            }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="inline-block mb-3"
-                          >
-                            <BookOpen className="h-12 w-12 text-primary/60" />
-                          </motion.div>
-                          <h3 className="text-xl font-medium mb-4">Create Learning Flashcards</h3>
-                          <p className="text-muted-foreground mb-6 max-w-md">
-                            Generate interactive flashcards to help you remember the key concepts from this document
-                          </p>
-                          <Button onClick={handleGenerateFlashcards} className="px-6 bg-gradient-to-r from-primary to-primary/80">
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            Generate Flashcards
-                          </Button>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="insights" className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.1)" }}
-                        className="transition-all duration-300"
-                      >
-                        <Card className="glass shadow-glass border border-white/10 backdrop-blur-xl overflow-hidden">
-                          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <Brain className="h-5 w-5 text-primary/70" />
-                              Content Analysis
-                            </CardTitle>
-                            <CardDescription>AI-generated insights about this document</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-4 pt-6">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm">Reading Level:</span>
-                              <span className="font-medium">College</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm">Content Complexity:</span>
-                              <span className="font-medium">Advanced (72/100)</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm">Overall Sentiment:</span>
-                              <span className="font-medium">Neutral</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm">Word Count:</span>
-                              <span className="font-medium">1,250 words</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm">Reading Time:</span>
-                              <span className="font-medium">~6 minutes</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                      
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.1)" }}
-                        className="transition-all duration-300"
-                      >
-                        <Card className="glass shadow-glass border border-white/10 backdrop-blur-xl overflow-hidden">
-                          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <BarChart2 className="h-5 w-5 text-primary/70" />
-                              Topic Distribution
-                            </CardTitle>
-                            <CardDescription>Main subjects covered in the document</CardDescription>
-                          </CardHeader>
-                          <CardContent className="pt-6">
-                            <div className="space-y-4">
-                              {[
-                                { topic: "Technology", percentage: 45 },
-                                { topic: "Innovation", percentage: 30 },
-                                { topic: "Research", percentage: 15 },
-                                { topic: "Business", percentage: 10 }
-                              ].map((item, index) => (
-                                <motion.div 
-                                  key={index}
-                                  initial={{ opacity: 0, width: 0 }}
-                                  animate={{ opacity: 1, width: "100%" }}
-                                  transition={{ delay: 0.3 + (index * 0.1), duration: 0.5 }}
-                                >
-                                  <div className="flex justify-between text-sm mb-1">
-                                    <span>{item.topic}</span>
-                                    <span>{item.percentage}%</span>
-                                  </div>
-                                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                    <motion.div 
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${item.percentage}%` }}
-                                      transition={{ delay: 0.5 + (index * 0.1), duration: 0.7, ease: "easeOut" }}
-                                      className="bg-primary rounded-full h-2"
-                                    />
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.1)" }}
-                        className="col-span-1 md:col-span-2 transition-all duration-300"
-                      >
-                        <Card className="glass shadow-glass border border-white/10 backdrop-blur-xl overflow-hidden">
-                          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <motion.div
-                                animate={{ rotate: [0, 5, 0, -5, 0] }}
-                                transition={{ duration: 5, repeat: Infinity }}
-                              >
-                                <Brain className="h-5 w-5 text-primary/70" />
-                              </motion.div>
-                              Related Concepts
-                            </CardTitle>
-                            <CardDescription>Key concepts connected to this document</CardDescription>
-                          </CardHeader>
-                          <CardContent className="pt-6">
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: 0.4, duration: 0.5 }}
-                              className="flex flex-wrap gap-3"
-                            >
-                              {[
-                                "Artificial Intelligence", 
-                                "Machine Learning", 
-                                "Neural Networks",
-                                "Data Science",
-                                "Algorithms",
-                                "Deep Learning",
-                                "NLP",
-                                "Robotics"
-                              ].map((concept, index) => (
-                                <motion.span
-                                  key={index}
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  className="px-3 py-1.5 bg-primary/10 rounded-full text-sm"
-                                >
-                                  {concept}
-                                </motion.span>
-                              ))}
-                            </motion.div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </div>
-                  </TabsContent>
-                </motion.div>
-              </AnimatePresence>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.section>
-  );
-};
-
-export default SummarySection;
+                            className

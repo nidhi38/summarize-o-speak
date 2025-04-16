@@ -70,3 +70,58 @@ export function isSpeechRecognitionSupported(): boolean {
 export function isTextToSpeechSupported(): boolean {
   return 'speechSynthesis' in window;
 }
+
+// Handle API errors gracefully
+export function handleApiError(error: unknown): string {
+  console.error("API Error:", error);
+  if (error instanceof Error) {
+    return `Operation failed: ${error.message}`;
+  }
+  return "An unexpected error occurred. Please try again.";
+}
+
+// Format file size in human-readable format
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Validate language code
+export function isValidLanguageCode(code: string, supportedLanguages: Array<{code: string}>): boolean {
+  return supportedLanguages.some(lang => lang.code === code);
+}
+
+// Generate a gradient color based on percentage
+export function getGradientColor(percentage: number): string {
+  if (percentage <= 30) return "from-red-500 to-red-400";
+  if (percentage <= 70) return "from-yellow-500 to-yellow-400";
+  return "from-green-500 to-green-400";
+}
+
+// Format date in user-friendly format
+export function formatDate(date: Date | string | number): string {
+  if (!date) return '';
+  const d = new Date(date);
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit'
+  }).format(d);
+}
+
+// Debounce function for handling input events
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  return function(...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}

@@ -4,7 +4,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
-import { FlashcardSet, Flashcard } from "@/lib/AIService";
+import { ProgressBar } from "@/components/ProgressBar";
+
+export interface Flashcard {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface FlashcardSet {
+  id: string;
+  title: string;
+  cards: Flashcard[];
+  createdAt?: Date;
+}
 
 interface FlashcardsProps {
   flashcardSet: FlashcardSet | null;
@@ -14,15 +27,17 @@ const FlashcardComponent = ({ flashcardSet }: FlashcardsProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [completed, setCompleted] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset state when flashcard set changes
   useEffect(() => {
     setCurrentIndex(0);
     setFlipped(false);
     setCompleted([]);
+    setError(null);
   }, [flashcardSet]);
 
-  if (!flashcardSet || flashcardSet.cards.length === 0) {
+  if (!flashcardSet || !flashcardSet.cards || flashcardSet.cards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
         <p>No flashcards available. Generate flashcards from a document first.</p>
@@ -30,7 +45,16 @@ const FlashcardComponent = ({ flashcardSet }: FlashcardsProps) => {
     );
   }
 
+  const totalCards = flashcardSet.cards.length;
   const currentCard = flashcardSet.cards[currentIndex];
+  
+  if (!currentCard) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+        <p>Error loading card. Please try regenerating the flashcards.</p>
+      </div>
+    );
+  }
   
   const handleNext = () => {
     if (currentIndex < flashcardSet.cards.length - 1) {
@@ -59,7 +83,7 @@ const FlashcardComponent = ({ flashcardSet }: FlashcardsProps) => {
     setCompleted([]);
   };
 
-  const progress = ((completed.length / flashcardSet.cards.length) * 100).toFixed(0);
+  const progress = Math.round((completed.length / totalCards) * 100);
 
   return (
     <motion.div
@@ -69,10 +93,16 @@ const FlashcardComponent = ({ flashcardSet }: FlashcardsProps) => {
       transition={{ duration: 0.5 }}
       className="w-full max-w-3xl mx-auto my-8 px-4"
     >
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+      
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold mb-2">{flashcardSet.title}</h2>
         <p className="text-muted-foreground text-sm">
-          {completed.length} of {flashcardSet.cards.length} cards studied • 
+          {completed.length} of {totalCards} cards studied • 
           {progress}% complete
         </p>
       </div>
@@ -130,7 +160,19 @@ const FlashcardComponent = ({ flashcardSet }: FlashcardsProps) => {
         </Button>
       </div>
       
-      <div className="mt-8 grid grid-cols-8 gap-1">
+      <div className="mt-6 mb-4">
+        <ProgressBar 
+          value={completed.length} 
+          max={totalCards} 
+          height={8}
+          animate={true}
+          gradient={true}
+          showPercentage={true}
+          className="w-full"
+        />
+      </div>
+      
+      <div className="mt-4 grid grid-cols-8 gap-1">
         {flashcardSet.cards.map((_, idx) => (
           <div 
             key={idx}

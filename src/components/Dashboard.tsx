@@ -11,38 +11,28 @@ import { SUPPORTED_LANGUAGES } from "@/lib/constants";
 import { formatDistanceToNow } from "date-fns";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PieChart as ReChartPieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
-import FlashcardComponent from "@/components/Flashcards";
+import FlashcardComponent, { FlashcardSet } from "@/components/Flashcards";
+import { handleApiError, formatFileSize, formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { ProgressBar } from "@/components/ProgressBar";
 
 export interface DashboardProps {
   audioConversions: AudioConversion[];
   processedFile: DocumentFile | null;
 }
 
-// Define FlashcardSet type for the Dashboard
-interface FlashcardSet {
-  id: string;
-  title: string;
-  cards: {
-    id: string;
-    question: string;
-    answer: string;
-  }[];
-  createdAt: Date;
-}
-
-// Sample data for demonstration (would be replaced with real data in production)
-const samplePieData = [
-  { name: 'Key Points', value: 40, color: '#8B5CF6' },
-  { name: 'Context', value: 30, color: '#EC4899' },
-  { name: 'Examples', value: 20, color: '#10B981' },
-  { name: 'References', value: 10, color: '#F59E0B' }
-];
-
 // Books reading data for pie chart
 const booksReadData = [
   { name: 'Completed', value: 5, color: '#10B981' }, // Green
   { name: 'In Progress', value: 3, color: '#8B5CF6' }, // Purple
   { name: 'To Read', value: 8, color: '#F59E0B' } // Orange
+];
+
+const samplePieData = [
+  { name: 'Key Points', value: 40, color: '#8B5CF6' },
+  { name: 'Context', value: 30, color: '#EC4899' },
+  { name: 'Examples', value: 20, color: '#10B981' },
+  { name: 'References', value: 10, color: '#F59E0B' }
 ];
 
 const sampleAIInsights = [
@@ -57,16 +47,6 @@ const sampleReadBooks = [
   { title: "Clean Code", progress: 100, author: "Robert C. Martin" },
   { title: "The Pragmatic Programmer", progress: 65, author: "Hunt & Thomas" }
 ];
-
-const sampleFlashcardSet = {
-  id: "sample-123",
-  title: "Key Concepts Flashcards",
-  cards: [
-    { id: "1", question: "What is the main purpose of this document?", answer: "To explain the system architecture and implementation details." },
-    { id: "2", question: "What technology is primarily discussed?", answer: "Distributed systems and microservices architecture." },
-    { id: "3", question: "What is the recommended approach for deployment?", answer: "Containerization using Docker with Kubernetes orchestration." }
-  ]
-};
 
 const mockFlashcards: FlashcardSet = {
   id: crypto.randomUUID(),
@@ -102,8 +82,10 @@ const mockFlashcards: FlashcardSet = {
 };
 
 const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
+  const { toast } = useToast();
+
   // Function to format date properly
-  const formatDate = (dateValue: Date | string | number) => {
+  const formatTimeAgo = (dateValue: Date | string | number) => {
     try {
       const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
       return formatDistanceToNow(date, { addSuffix: true });
@@ -111,6 +93,16 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
       console.error("Date formatting error:", error);
       return "Unknown date";
     }
+  };
+
+  const handleError = (error: unknown) => {
+    const errorMessage = handleApiError(error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: errorMessage,
+    });
+    return errorMessage;
   };
 
   return (
@@ -174,7 +166,7 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
               value="flashcards" 
               className="flex-1 py-3 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300"
             >
-              <FileText className="h-4 w-4 mr-2" />
+              <BookOpen className="h-4 w-4 mr-2" />
               Flashcards
             </TabsTrigger>
           </TabsList>
@@ -227,7 +219,7 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
                               </a>
                               <span className="text-xs text-violet-500 dark:text-violet-400 flex items-center">
                                 <Clock className="h-3 w-3 inline-block mr-1" />
-                                {formatDate(createdAt)}
+                                {formatTimeAgo(createdAt)}
                               </span>
                             </div>
                           </div>
@@ -303,15 +295,15 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
                       >
                         <h4 className="font-semibold truncate">{book.title}</h4>
                         <p className="text-xs text-muted-foreground">{book.author}</p>
-                        <div className="mt-2 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
-                          <div 
-                            className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
-                            style={{ width: `${book.progress}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-right mt-1 text-indigo-600 dark:text-indigo-400">
-                          {book.progress}% completed
-                        </p>
+                        <ProgressBar
+                          value={book.progress}
+                          max={100}
+                          height={8}
+                          animate={true}
+                          gradient={true}
+                          showPercentage={true}
+                          className="mt-2"
+                        />
                       </motion.div>
                     ))}
                   </div>
@@ -352,6 +344,16 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
                             {SUPPORTED_LANGUAGES.find(l => l.code === processedFile.language)?.name}
                           </span>
                         </p>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-2 border-t border-violet-100 dark:border-violet-800/30">
+                        <ChevronRight className="h-5 w-5 text-violet-500" />
+                        <h4 className="text-sm font-semibold">File Size:</h4>
+                        <p className="text-sm">{formatFileSize(processedFile.size || 0)}</p>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-2 border-t border-violet-100 dark:border-violet-800/30">
+                        <ChevronRight className="h-5 w-5 text-violet-500" />
+                        <h4 className="text-sm font-semibold">Processed Date:</h4>
+                        <p className="text-sm">{formatDate(new Date())}</p>
                       </div>
                     </div>
                   </div>

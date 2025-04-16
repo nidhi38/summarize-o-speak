@@ -2,7 +2,11 @@
 // Language-specific sample texts for the AudioConverter component
 export const languageSamples = {
   hi: {
-    // Hindi samples are already in HINDI_TEXT_SAMPLES in constants.ts
+    samples: [
+      "नमस्ते, स्पीच कनवर्टर में आपका स्वागत है",
+      "यह हिंदी में एक परीक्षण उदाहरण पाठ है",
+      "आप इस ऐप का उपयोग भाषण को टेक्स्ट में और इसके विपरीत परिवर्तित करने के लिए कर सकते हैं"
+    ]
   },
   ar: {
     samples: [
@@ -80,5 +84,60 @@ export const languageSamples = {
       "This is an English sample text for testing",
       "You can use this app to convert speech to text and vice versa"
     ]
+  },
+  tr: {
+    samples: [
+      "Konuşma Dönüştürücüsüne Hoş Geldiniz",
+      "Bu, test için bir Türkçe örnek metnidir",
+      "Bu uygulamayı konuşmayı metne ve tam tersine dönüştürmek için kullanabilirsiniz"
+    ]
+  },
+  pl: {
+    samples: [
+      "Witamy w Konwerterze Mowy",
+      "To jest przykładowy tekst w języku polskim do testowania",
+      "Możesz użyć tej aplikacji do konwersji mowy na tekst i odwrotnie"
+    ]
+  },
+  nl: {
+    samples: [
+      "Welkom bij de Spraakconverter",
+      "Dit is een Nederlandse voorbeeldtekst om te testen",
+      "Je kunt deze app gebruiken om spraak naar tekst en vice versa te converteren"
+    ]
+  },
+  sv: {
+    samples: [
+      "Välkommen till talomvandlaren",
+      "Detta är en svensk exempeltext för testning",
+      "Du kan använda denna app för att konvertera tal till text och vice versa"
+    ]
+  },
+  uk: {
+    samples: [
+      "Ласкаво просимо до конвертера мовлення",
+      "Це приклад тексту українською мовою для тестування",
+      "Ви можете використовувати цей додаток для перетворення мовлення в текст і навпаки"
+    ]
   }
 };
+
+// Helper functions for language samples
+export function getRandomSampleForLanguage(languageCode: string): string {
+  const language = languageSamples[languageCode as keyof typeof languageSamples];
+  if (!language || !language.samples || language.samples.length === 0) {
+    return "Sample text not available for this language.";
+  }
+  
+  const samples = language.samples;
+  const randomIndex = Math.floor(Math.random() * samples.length);
+  return samples[randomIndex];
+}
+
+export function getAllLanguagesWithSamples(): string[] {
+  return Object.keys(languageSamples);
+}
+
+export function isSampleAvailableForLanguage(languageCode: string): boolean {
+  return Boolean(languageSamples[languageCode as keyof typeof languageSamples]);
+}
