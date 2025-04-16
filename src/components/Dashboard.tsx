@@ -1,4 +1,3 @@
-
 import { DocumentFile, AudioConversion } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -113,7 +112,6 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
         transition={{ duration: 0.5 }}
         className="grid gap-6"
       >
-        {/* Dashboard Header Card */}
         <Card className="overflow-hidden bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 text-white border-none shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="relative">
             <motion.div 
@@ -138,7 +136,6 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
           </CardContent>
         </Card>
 
-        {/* Main Dashboard Content */}
         <Tabs defaultValue="recent" className="w-full">
           <TabsList className="w-full mb-6 bg-violet-100 dark:bg-violet-900/30 p-1 rounded-xl">
             <TabsTrigger 
@@ -172,8 +169,7 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
           </TabsList>
           
           <TabsContent value="recent" className="space-y-6">
-            {/* Audio Conversions Card */}
-            <Card className="glass backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 border border-white/20 shadow-xl hover:shadow-violet-200/20 dark:hover:shadow-violet-900/20 transition-all duration-300 overflow-hidden">
+            <Card className="glass backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 border border-white/20 shadow-xl hover:shadow-violet-200/20 dark:hover:shadow-violet-900/20 transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xl font-medium flex items-center">
                   <FileAudio className="h-5 w-5 mr-2 text-violet-500" />
@@ -184,7 +180,6 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
                 {audioConversions && audioConversions.length > 0 ? (
                   <div className="grid gap-3">
                     {audioConversions.map((conversion) => {
-                      // Ensure conversion.createdAt is treated as a Date
                       const createdAt = conversion.createdAt instanceof Date 
                         ? conversion.createdAt 
                         : new Date(conversion.createdAt || Date.now());
@@ -237,8 +232,7 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
               </CardContent>
             </Card>
 
-            {/* Reading Statistics */}
-            <Card className="glass backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 border border-white/20 shadow-xl hover:shadow-violet-200/20 dark:hover:shadow-violet-900/20 transition-all duration-300 overflow-hidden">
+            <Card className="glass backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 border border-white/20 shadow-xl hover:shadow-violet-200/20 dark:hover:shadow-violet-900/20 transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xl font-medium flex items-center">
                   <BookOpen className="h-5 w-5 mr-2 text-violet-500" />
@@ -247,7 +241,6 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Books read pie chart */}
                   <div className="md:col-span-1">
                     <h3 className="text-center font-medium mb-2">Books Summary</h3>
                     <div className="h-64">
@@ -283,7 +276,6 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
                     </div>
                   </div>
 
-                  {/* Books progress bars */}
                   <div className="md:col-span-2 flex flex-col justify-center space-y-4">
                     {sampleReadBooks.map((book, index) => (
                       <motion.div
@@ -369,7 +361,6 @@ const Dashboard = ({ audioConversions, processedFile }: DashboardProps) => {
               </Card>
             )}
             
-            {/* Content Breakdown - Pie Chart */}
             <Card className="glass backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 border border-white/20 shadow-xl hover:shadow-violet-200/20 dark:hover:shadow-violet-900/20 transition-all duration-300 overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xl font-medium flex items-center">

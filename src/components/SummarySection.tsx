@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Download, Headphones, Languages, Brain, BookOpen, ArrowRight, ChevronDown, ChevronUp, Clock, BarChart2, FileCheck, ListChecks, Book } from "lucide-react";
@@ -21,13 +20,22 @@ export interface SummaryResponse {
   topics: string[];
 }
 
+export interface AIInsightsResponse {
+  topics: string[];
+  sentiment: string;
+  complexity: number;
+  readingLevel: string;
+  wordCount: number;
+  readTime: number;
+}
+
 interface AIService {
   translateText: (text: string, targetLanguage: string) => Promise<any>;
   textToSpeech: (text: string, language: string) => Promise<string>;
   speechToText: (audioBlob: Blob, language: string) => Promise<any>;
   summarizeText?: (text: string) => Promise<SummaryResponse>;
   generateFlashcards?: (text: string) => Promise<FlashcardSet>;
-  getInsights?: (text: string) => Promise<any>;
+  getInsights?: (text: string) => Promise<AIInsightsResponse>;
 }
 
 interface SummarySectionProps {
@@ -51,6 +59,7 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
     insights: false
   });
   const [error, setError] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null);
 
   const { toast } = useToast();
   
@@ -305,7 +314,8 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
       });
       
       if (mockAIService.getInsights) {
-        await mockAIService.getInsights(file.summary);
+        const insightsData = await mockAIService.getInsights(file.summary);
+        setAiInsights(insightsData);
         setActiveTab("insights");
         
         toast({
@@ -458,145 +468,143 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <AnimatePresence>
-              {expandedView && (
-                <motion.div 
-                  className="pb-6"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <motion.div 
-                      variants={itemVariants}
-                      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
-                      className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
-                    >
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        <Book className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Total Pages</div>
-                        <div className="text-xl font-semibold">{readingMetrics.totalPages}</div>
-                      </div>
-                    </motion.div>
-                    <motion.div 
-                      variants={itemVariants}
-                      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
-                      className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
-                    >
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        <ListChecks className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Word Count</div>
-                        <div className="text-xl font-semibold">{readingMetrics.totalWords.toLocaleString()}</div>
-                      </div>
-                    </motion.div>
-                    <motion.div 
-                      variants={itemVariants}
-                      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
-                      className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
-                    >
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        <Clock className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Time Saved</div>
-                        <div className="text-xl font-semibold">{readingMetrics.timeSaved} min</div>
-                      </div>
-                    </motion.div>
-                  </div>
-
+            {expandedView && (
+              <motion.div 
+                className="pb-6"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <motion.div 
                     variants={itemVariants}
-                    className="mb-6"
+                    whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
+                    className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
                   >
-                    <h3 className="text-lg font-medium mb-2">Document Structure</h3>
-                    <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
-                      <Accordion type="single" collapsible className="w-full">
-                        {documentStructure.map((section, index) => (
-                          <AccordionItem key={index} value={`section-${index}`}>
-                            <motion.div whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }} className="rounded-md">
-                              <AccordionTrigger className="hover:no-underline px-3">
-                                <div className="flex items-center justify-between w-full pr-4">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{section.title}</span>
-                                    <span className="text-xs text-muted-foreground">Pages {section.pageRange}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{section.wordCount} words</span>
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Book className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Total Pages</div>
+                      <div className="text-xl font-semibold">{readingMetrics.totalPages}</div>
+                    </div>
+                  </motion.div>
+                  <motion.div 
+                    variants={itemVariants}
+                    whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
+                    className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
+                  >
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <ListChecks className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Word Count</div>
+                      <div className="text-xl font-semibold">{readingMetrics.totalWords.toLocaleString()}</div>
+                    </div>
+                  </motion.div>
+                  <motion.div 
+                    variants={itemVariants}
+                    whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}
+                    className="bg-primary/5 rounded-lg p-4 flex items-center gap-3 transition-all duration-300"
+                  >
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Clock className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Time Saved</div>
+                      <div className="text-xl font-semibold">{readingMetrics.timeSaved} min</div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                <motion.div 
+                  variants={itemVariants}
+                  className="mb-6"
+                >
+                  <h3 className="text-lg font-medium mb-2">Document Structure</h3>
+                  <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
+                    <Accordion type="single" collapsible className="w-full">
+                      {documentStructure.map((section, index) => (
+                        <AccordionItem key={index} value={`section-${index}`}>
+                          <motion.div whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }} className="rounded-md">
+                            <AccordionTrigger className="hover:no-underline px-3">
+                              <div className="flex items-center justify-between w-full pr-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{section.title}</span>
+                                  <span className="text-xs text-muted-foreground">Pages {section.pageRange}</span>
                                 </div>
-                              </AccordionTrigger>
-                            </motion.div>
-                            <AccordionContent className="px-3">
-                              <motion.div 
-                                initial={{ opacity: 0, y: -5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -5 }}
-                                className="text-sm text-muted-foreground pl-4 border-l-2 border-muted"
-                              >
-                                <p>This section covers the key points related to {section.title.toLowerCase()}. 
-                                The content is approximately {(section.wordCount / readingMetrics.totalWords * 100).toFixed(1)}% of the total document.</p>
-                              </motion.div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="mb-4">
-                    <h3 className="text-lg font-medium mb-3">Reading Efficiency</h3>
-                    <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
-                      <div className="flex flex-col sm:flex-row justify-between mb-3 gap-3">
-                        <motion.div 
-                          whileHover={{ scale: 1.02 }}
-                          className="flex-1 text-center p-3 bg-primary/5 rounded-lg"
-                        >
-                          <div className="text-sm text-muted-foreground">Full Reading Time</div>
-                          <div className="text-xl font-medium">{readingMetrics.estimatedReadTime} minutes</div>
-                        </motion.div>
-                        <div className="flex items-center justify-center">
-                          <motion.div 
-                            animate={{ x: [0, 10, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                          >
-                            <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 sm:rotate-0" />
+                                <span className="text-xs text-muted-foreground">{section.wordCount} words</span>
+                              </div>
+                            </AccordionTrigger>
                           </motion.div>
-                        </div>
+                          <AccordionContent className="px-3">
+                            <motion.div 
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="text-sm text-muted-foreground pl-4 border-l-2 border-muted"
+                            >
+                              <p>This section covers the key points related to {section.title.toLowerCase()}. 
+                              The content is approximately {(section.wordCount / readingMetrics.totalWords * 100).toFixed(1)}% of the total document.</p>
+                            </motion.div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </div>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="mb-4">
+                  <h3 className="text-lg font-medium mb-3">Reading Efficiency</h3>
+                  <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
+                    <div className="flex flex-col sm:flex-row justify-between mb-3 gap-3">
+                      <motion.div 
+                        whileHover={{ scale: 1.02 }}
+                        className="flex-1 text-center p-3 bg-primary/5 rounded-lg"
+                      >
+                        <div className="text-sm text-muted-foreground">Full Reading Time</div>
+                        <div className="text-xl font-medium">{readingMetrics.estimatedReadTime} minutes</div>
+                      </motion.div>
+                      <div className="flex items-center justify-center">
                         <motion.div 
-                          whileHover={{ scale: 1.02 }}
-                          className="flex-1 text-center p-3 bg-primary/5 rounded-lg"
+                          animate={{ x: [0, 10, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
                         >
-                          <div className="text-sm text-muted-foreground">Summary Reading Time</div>
-                          <div className="text-xl font-medium">{readingMetrics.summaryReadTime} minutes</div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 sm:rotate-0" />
                         </motion.div>
                       </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm">Time Efficiency</span>
-                          <span className="text-sm font-medium">
-                            {Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%
-                          </span>
-                        </div>
-                        <ProgressBar 
-                          value={readingMetrics.timeSaved} 
-                          max={readingMetrics.estimatedReadTime}
-                          height={8}
-                          gradient={true}
-                          animate={true}
-                        />
-                        <p className="text-xs text-muted-foreground mt-2">
-                          You're saving {readingMetrics.timeSaved} minutes by reading this summary instead of the full document.
-                        </p>
-                      </div>
+                      <motion.div 
+                        whileHover={{ scale: 1.02 }}
+                        className="flex-1 text-center p-3 bg-primary/5 rounded-lg"
+                      >
+                        <div className="text-sm text-muted-foreground">Summary Reading Time</div>
+                        <div className="text-xl font-medium">{readingMetrics.summaryReadTime} minutes</div>
+                      </motion.div>
                     </div>
-                  </motion.div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm">Time Efficiency</span>
+                        <span className="text-sm font-medium">
+                          {Math.round((readingMetrics.timeSaved / readingMetrics.estimatedReadTime) * 100)}%
+                        </span>
+                      </div>
+                      <ProgressBar 
+                        value={readingMetrics.timeSaved} 
+                        max={readingMetrics.estimatedReadTime}
+                        height={8}
+                        gradient={true}
+                        animate={true}
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        You're saving {readingMetrics.timeSaved} minutes by reading this summary instead of the full document.
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
-              )}
-            </AnimatePresence>
-
+              </motion.div>
+            )}
+            
             <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full grid grid-cols-4">
                 <TabsTrigger value="summary" className="transition-all duration-300">Basic Summary</TabsTrigger>
@@ -843,17 +851,158 @@ const SummarySection = ({ file, onTranslate, onTextToSpeech }: SummarySectionPro
                   </TabsContent>
                   
                   <TabsContent value="flashcards" className="pt-4">
-                    {/* Flashcard content would go here */}
-                    <div className="min-h-[300px] flex items-center justify-center">
-                      <p>Flashcard content would be displayed here.</p>
-                    </div>
+                    {flashcards ? (
+                      <motion.div 
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        <FlashcardComponent flashcardSet={flashcards} />
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        className="min-h-[300px] flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <motion.div 
+                          whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }} 
+                          whileTap={{ scale: 0.95 }}
+                          className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-transparent text-center"
+                        >
+                          <motion.div 
+                            animate={{ 
+                              scale: [1, 1.1, 1],
+                              rotate: [0, 5, 0, -5, 0]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="flex justify-center mb-4"
+                          >
+                            <BookOpen className="h-12 w-12 text-primary/40" />
+                          </motion.div>
+                          <h3 className="text-lg font-medium mb-2">No Flashcards Yet</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Generate flashcards to help you study and memorize key information
+                          </p>
+                          <Button 
+                            onClick={handleGenerateFlashcards}
+                            disabled={isLoading.flashcards}
+                            className="bg-primary/80 hover:bg-primary"
+                          >
+                            {isLoading.flashcards ? (
+                              <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2" />
+                            ) : null}
+                            Create Flashcards
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    )}
                   </TabsContent>
                   
                   <TabsContent value="insights" className="pt-4">
-                    {/* Insights content would go here */}
-                    <div className="min-h-[300px] flex items-center justify-center">
-                      <p>Insights content would be displayed here.</p>
-                    </div>
+                    {aiInsights ? (
+                      <motion.div 
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-6"
+                      >
+                        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <motion.div 
+                            whileHover={{ scale: 1.03, y: -5 }}
+                            className="p-4 rounded-lg bg-primary/5 flex flex-col items-center justify-center"
+                          >
+                            <h4 className="font-medium text-muted-foreground mb-1">Sentiment</h4>
+                            <p className="text-2xl font-semibold">{aiInsights.sentiment}</p>
+                          </motion.div>
+                          <motion.div 
+                            whileHover={{ scale: 1.03, y: -5 }}
+                            className="p-4 rounded-lg bg-primary/5 flex flex-col items-center justify-center"
+                          >
+                            <h4 className="font-medium text-muted-foreground mb-1">Complexity</h4>
+                            <p className="text-2xl font-semibold">{aiInsights.complexity}/100</p>
+                          </motion.div>
+                          <motion.div 
+                            whileHover={{ scale: 1.03, y: -5 }}
+                            className="p-4 rounded-lg bg-primary/5 flex flex-col items-center justify-center"
+                          >
+                            <h4 className="font-medium text-muted-foreground mb-1">Reading Level</h4>
+                            <p className="text-2xl font-semibold">{aiInsights.readingLevel}</p>
+                          </motion.div>
+                        </motion.div>
+                        
+                        <motion.div variants={itemVariants}>
+                          <h3 className="text-lg font-medium mb-2">Reading Statistics</h3>
+                          <div className="p-4 rounded-lg bg-primary/5">
+                            <div className="flex justify-between mb-2">
+                              <span>Word Count</span>
+                              <span className="font-medium">{aiInsights.wordCount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between mb-4">
+                              <span>Estimated Reading Time</span>
+                              <span className="font-medium">{aiInsights.readTime} min</span>
+                            </div>
+                            
+                            <h4 className="text-sm font-medium mb-2">Topic Distribution</h4>
+                            <div className="space-y-2">
+                              {aiInsights.topics.map((topic, index) => (
+                                <div key={index}>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>{topic}</span>
+                                    <span>{Math.round(100 / aiInsights.topics.length)}%</span>
+                                  </div>
+                                  <ProgressBar 
+                                    value={100 / aiInsights.topics.length} 
+                                    max={100}
+                                    gradient={true}
+                                    height={6}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        className="min-h-[300px] flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <motion.div 
+                          whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }} 
+                          whileTap={{ scale: 0.95 }}
+                          className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-transparent text-center"
+                        >
+                          <motion.div 
+                            animate={{ 
+                              scale: [1, 1.1, 1],
+                              rotate: [0, 5, 0, -5, 0]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="flex justify-center mb-4"
+                          >
+                            <BarChart2 className="h-12 w-12 text-primary/40" />
+                          </motion.div>
+                          <h3 className="text-lg font-medium mb-2">No Insights Yet</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Analyze your document to get detailed insights and statistics
+                          </p>
+                          <Button 
+                            onClick={handleGenerateInsights}
+                            disabled={isLoading.insights}
+                            className="bg-primary/80 hover:bg-primary"
+                          >
+                            {isLoading.insights ? (
+                              <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2" />
+                            ) : null}
+                            Analyze Content
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    )}
                   </TabsContent>
                 </motion.div>
               </AnimatePresence>
