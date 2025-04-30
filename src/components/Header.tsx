@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Globe, LayoutDashboard, Menu, X } from "lucide-react";
+import { Globe, LayoutDashboard, Menu, X, Sparkles } from "lucide-react";
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/constants";
 import { 
   DropdownMenu, 
@@ -50,7 +50,7 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
           className="text-2xl font-bold"
         >
           <motion.span 
-            className="bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent"
+            className="bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent flex items-center"
             animate={{ 
               backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
             }}
@@ -60,6 +60,7 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
               ease: "linear"
             }}
           >
+            <Sparkles className="w-5 h-5 mr-2 text-yellow-400" />
             Summarizer
           </motion.span>
         </motion.h1>
@@ -107,6 +108,12 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button variant="shiny" size="sm" className="flex items-center gap-2">
+            <span>Premium</span>
+          </Button>
+        </motion.div>
       </div>
       
       {/* Mobile menu button */}
@@ -167,6 +174,14 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
                 <span>Dashboard</span>
               </Button>
             )}
+            
+            <Button 
+              variant="shiny" 
+              size="sm" 
+              className="flex items-center justify-center gap-2 w-full"
+            >
+              <span>Premium</span>
+            </Button>
             
             <div className="grid grid-cols-2 gap-2 mt-2">
               {SUPPORTED_LANGUAGES.map((lang) => (

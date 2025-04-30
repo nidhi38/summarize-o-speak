@@ -1,6 +1,6 @@
 
 import { motion } from "framer-motion";
-import { ArrowDown, Sparkles } from "lucide-react";
+import { ArrowDown, FileText, Sparkles, Book, Zap, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface HeroProps {
@@ -45,18 +45,61 @@ const Hero = ({ scrollToContent }: HeroProps) => {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mt-4"
         >
-          Summarizer uses advanced AI technology to extract key information from your PDFs and 
-          documents. Save time with multilingual summaries and audio conversions.
+          Summarizer uses advanced AI technology to extract key information from PDFs, docs, and images.
+          Save time with multilingual summaries, audio conversions, and intuitive document analysis.
         </motion.p>
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
+          className="flex flex-wrap justify-center gap-4 mt-10"
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center justify-center glass rounded-lg p-4 shadow-glass w-[280px] text-center border border-white/20"
+          >
+            <FileText className="w-6 h-6 text-primary mr-2" />
+            <span>Comprehensive PDF Analysis</span>
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center justify-center glass rounded-lg p-4 shadow-glass w-[280px] text-center border border-white/20"
+          >
+            <Book className="w-6 h-6 text-violet-500 mr-2" />
+            <span>Multilingual Document Support</span>
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center justify-center glass rounded-lg p-4 shadow-glass w-[280px] text-center border border-white/20"
+          >
+            <Zap className="w-6 h-6 text-yellow-500 mr-2" />
+            <span>Enhanced Audio Conversions</span>
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center justify-center glass rounded-lg p-4 shadow-glass w-[280px] text-center border border-white/20"
+          >
+            <Globe className="w-6 h-6 text-blue-500 mr-2" />
+            <span>Cross-Language Translation</span>
+          </motion.div>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10"
         >
           <Button 
-            variant="glow"
+            variant="neon"
             size="xl"
             className="group"
             onClick={scrollToContent}
@@ -78,12 +121,43 @@ const Hero = ({ scrollToContent }: HeroProps) => {
           </Button>
           
           <Button 
-            variant="glass" 
+            variant="outline3d" 
             size="xl"
             onClick={() => window.open('#', '_blank')}
           >
             See Examples
           </Button>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 1 }}
+          className="mt-12 relative w-full max-w-2xl mx-auto"
+        >
+          <div className="aspect-[16/9] rounded-lg shadow-2xl border border-white/20 overflow-hidden bg-black/20 backdrop-blur-sm">
+            <div className="w-full h-full bg-gradient-to-br from-violet-500/20 via-transparent to-fuchsia-500/20"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=600&q=80" 
+                alt="Document analysis preview" 
+                className="w-full h-full object-cover opacity-70"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <Button variant="gradient" size="lg" className="absolute bottom-6">
+                Watch Demo
+              </Button>
+            </div>
+          </div>
+          
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 1.2, duration: 0.5 }}
+            className="absolute -bottom-6 -right-6 w-32 h-32 rounded-full border-4 border-background bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-xl flex items-center justify-center text-white font-bold text-xl"
+          >
+            New!
+          </motion.div>
         </motion.div>
       </div>
       

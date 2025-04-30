@@ -23,6 +23,9 @@ const buttonVariants = cva(
         glow: "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(139,92,246,0.5)] hover:shadow-[0_0_25px_rgba(139,92,246,0.65)] hover:-translate-y-0.5 active:translate-y-0",
         glass: "glass border border-white/20 text-foreground hover:shadow-glass-hover hover:-translate-y-0.5 active:translate-y-0",
         neon: "relative bg-black text-white hover:-translate-y-0.5 active:translate-y-0 before:absolute before:inset-0 before:-z-10 before:bg-gradient-to-r before:from-pink-500 before:via-purple-500 before:to-indigo-500 before:blur-md before:opacity-75 before:transition-opacity hover:before:opacity-100",
+        soft: "bg-primary/15 text-primary hover:bg-primary/25 hover:-translate-y-0.5 active:translate-y-0",
+        shiny: "relative bg-primary text-white overflow-hidden isolate before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:border-t before:border-white/20 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
+        outline3d: "border border-primary/30 bg-background shadow-[5px_5px_0px_0px] shadow-primary/40 hover:-translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px] hover:shadow-primary/40 active:translate-y-0",
       },
       size: {
         default: "h-10 px-4 py-2",

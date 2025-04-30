@@ -16,6 +16,8 @@ interface ProgressBarProps {
   pulseEffect?: boolean;
   rounded?: "sm" | "md" | "lg" | "full";
   showBubble?: boolean;
+  striped?: boolean;
+  animated?: boolean;
 }
 
 export function ProgressBar({ 
@@ -31,7 +33,9 @@ export function ProgressBar({
   showGlow = false,
   pulseEffect = false,
   rounded = "full",
-  showBubble = false
+  showBubble = false,
+  striped = false,
+  animated = false
 }: ProgressBarProps) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
   
@@ -59,7 +63,8 @@ export function ProgressBar({
       <div 
         className={cn(
           "bg-gray-100 dark:bg-gray-800 overflow-hidden shadow-inner",
-          roundedClass
+          roundedClass,
+          striped ? "bg-stripes" : ""
         )}
         style={{ height: `${height}px` }}
       >
@@ -77,7 +82,9 @@ export function ProgressBar({
               roundedClass,
               gradient ? `bg-gradient-to-r ${gradientClass}` : "",
               showGlow && percentage > 60 ? "shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "",
-              pulseEffect && percentage > 75 ? "animate-pulse-soft" : ""
+              pulseEffect && percentage > 75 ? "animate-pulse-soft" : "",
+              striped ? "bg-stripes" : "",
+              animated ? "bg-stripes-animated" : ""
             )}
             style={!gradient ? { backgroundColor: color } : {}}
           />
@@ -88,7 +95,9 @@ export function ProgressBar({
               roundedClass,
               gradient ? `bg-gradient-to-r ${gradientClass}` : "",
               showGlow && percentage > 60 ? "shadow-[0_0_8px_rgba(139,92,246,0.6)]" : "",
-              pulseEffect && percentage > 75 ? "animate-pulse-soft" : ""
+              pulseEffect && percentage > 75 ? "animate-pulse-soft" : "",
+              striped ? "bg-stripes" : "",
+              animated ? "bg-stripes-animated" : ""
             )}
             style={{ 
               width: `${percentage}%`,

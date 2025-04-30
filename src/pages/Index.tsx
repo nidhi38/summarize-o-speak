@@ -8,6 +8,8 @@ import FileUploader from "@/components/FileUploader";
 import SummarySection from "@/components/SummarySection";
 import AudioConverter from "@/components/AudioConverter";
 import Dashboard from "@/components/Dashboard";
+import { SummarizerObjectives } from "@/components/SummarizerObjectives";
+import { PDFConverter } from "@/components/PDFConverter";
 import { DocumentFile, AudioConversion } from "@/lib/types";
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from "@/lib/constants";
 
@@ -236,6 +238,10 @@ const Index = () => {
                     />
                   )}
                 </AnimatePresence>
+                
+                <SummarizerObjectives />
+                
+                <PDFConverter />
                 
                 <div className="text-center my-16">
                   <motion.h2
