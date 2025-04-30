@@ -26,6 +26,10 @@ const buttonVariants = cva(
         soft: "bg-primary/15 text-primary hover:bg-primary/25 hover:-translate-y-0.5 active:translate-y-0",
         shiny: "relative bg-primary text-white overflow-hidden isolate before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:border-t before:border-white/20 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
         outline3d: "border border-primary/30 bg-background shadow-[5px_5px_0px_0px] shadow-primary/40 hover:-translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px] hover:shadow-primary/40 active:translate-y-0",
+        modern: "bg-gradient-to-br from-violet-500 to-purple-600 text-white border border-violet-700/30 shadow-[0_5px_15px_rgba(124,58,237,0.2)] hover:shadow-[0_8px_25px_rgba(124,58,237,0.3)] hover:-translate-y-1 active:translate-y-0",
+        minimal: "bg-transparent border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600",
+        animated: "relative bg-violet-600 text-white overflow-hidden z-0 before:absolute before:inset-0 before:-z-10 before:translate-x-[-150%] before:translate-y-[150%] before:scale-[2.5] before:rounded-[100%] before:bg-gradient-to-r before:from-violet-400 before:to-fuchsia-400 before:transition-transform before:duration-1000 hover:before:translate-x-[0%] hover:before:translate-y-[0%] hover:shadow-md",
+        pulsate: "bg-violet-600 text-white animate-pulse hover:animate-none hover:bg-violet-700",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -33,6 +37,7 @@ const buttonVariants = cva(
         lg: "h-11 rounded-md px-8",
         xl: "h-12 rounded-md px-10 text-base",
         icon: "h-10 w-10",
+        "2xl": "h-14 rounded-md px-12 text-lg",
       },
     },
     defaultVariants: {
