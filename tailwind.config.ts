@@ -109,7 +109,23 @@ export default {
 				'float': {
 					'0%, 100%': { transform: 'translateY(0)' },
 					'50%': { transform: 'translateY(-10px)' },
-				}
+				},
+				'shimmer': {
+					'0%': { backgroundPosition: '-200% 0' },
+					'100%': { backgroundPosition: '200% 0' },
+				},
+				'sparkle': {
+					'0%, 100%': { opacity: '0' },
+					'50%': { opacity: '1' },
+				},
+				'spin-slow': {
+					'0%': { transform: 'rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg)' },
+				},
+				'bounce-subtle': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-5px)' },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -121,6 +137,10 @@ export default {
 				'scale-in': 'scale-in 0.3s ease-out',
 				'pulse-soft': 'pulse-soft 3s infinite ease-in-out',
 				'float': 'float 6s infinite ease-in-out',
+				'shimmer': 'shimmer 2.5s infinite linear',
+				'sparkle': 'sparkle 1.5s infinite ease-in-out',
+				'spin-slow': 'spin-slow 8s linear infinite',
+				'bounce-subtle': 'bounce-subtle 2s infinite ease-in-out',
 			},
 			backdropFilter: {
 				'none': 'none',
@@ -131,6 +151,8 @@ export default {
 				'glass-hover': '0 10px 40px rgba(0, 0, 0, 0.15)',
 				'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
 				'elevated': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+				'glow': '0 0 15px rgba(139, 92, 246, 0.5)',
+				'intense': '0 20px 50px -15px rgba(0, 0, 0, 0.25)',
 			},
 		}
 	},
