@@ -40,16 +40,28 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 py-4 px-6 md:px-12 flex items-center justify-between ${
-        scrolled ? 'glass shadow-glass' : 'bg-transparent'
+        scrolled ? 'glass shadow-glass backdrop-blur-lg border-b border-white/10' : 'bg-transparent'
       }`}
     >
       <div className="flex items-center">
         <motion.h1 
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent"
+          className="text-2xl font-bold"
         >
-          Summarizer
+          <motion.span 
+            className="bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent"
+            animate={{ 
+              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+            }}
+            transition={{ 
+              duration: 10, 
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
+            Summarizer
+          </motion.span>
         </motion.h1>
       </div>
       
@@ -58,10 +70,10 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
         {onDashboardToggle && (
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button 
-              variant="ghost" 
+              variant="glass" 
               size="sm" 
               onClick={onDashboardToggle} 
-              className="flex items-center gap-2 hover:bg-primary/10 hover:text-primary"
+              className="flex items-center gap-2"
             >
               <LayoutDashboard className="h-4 w-4" />
               <span>Dashboard</span>
@@ -72,7 +84,7 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" size="sm" className="flex items-center gap-2 hover:bg-primary/10 hover:text-primary">
+              <Button variant="glass" size="sm" className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
                 <span>
                   {currentLanguage.flag} {currentLanguage.name}
@@ -80,7 +92,7 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
               </Button>
             </motion.div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 glass">
+          <DropdownMenuContent align="end" className="w-48 glass backdrop-blur-lg border border-white/10">
             {SUPPORTED_LANGUAGES.map((lang) => (
               <DropdownMenuItem
                 key={lang.code}
@@ -89,7 +101,7 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
                 }`}
                 onClick={() => setLanguage(lang.code)}
               >
-                <span>{lang.flag}</span>
+                <motion.span whileHover={{ scale: 1.2 }}>{lang.flag}</motion.span>
                 <span>{lang.name}</span>
               </DropdownMenuItem>
             ))}
@@ -100,12 +112,34 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
       {/* Mobile menu button */}
       <div className="md:hidden">
         <Button 
-          variant="ghost" 
+          variant="glass" 
           size="icon" 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-foreground hover:bg-primary/10"
+          className="text-foreground"
         >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <AnimatePresence mode="wait">
+            {mobileMenuOpen ? (
+              <motion.div
+                key="close"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <X className="h-5 w-5" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="menu"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Menu className="h-5 w-5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Button>
       </div>
       
@@ -113,15 +147,15 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, height: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, height: 'auto', backdropFilter: "blur(10px)" }}
+            exit={{ opacity: 0, height: 0, backdropFilter: "blur(0px)" }}
             transition={{ duration: 0.3 }}
-            className="absolute top-full left-0 right-0 glass shadow-glass p-4 flex flex-col gap-3"
+            className="absolute top-full left-0 right-0 glass shadow-glass p-4 flex flex-col gap-3 border-t border-white/10"
           >
             {onDashboardToggle && (
               <Button 
-                variant="ghost" 
+                variant="glass" 
                 size="sm" 
                 onClick={() => {
                   onDashboardToggle();
@@ -138,17 +172,17 @@ const Header = ({ language, setLanguage, onDashboardToggle }: HeaderProps) => {
               {SUPPORTED_LANGUAGES.map((lang) => (
                 <Button
                   key={lang.code}
-                  variant="ghost"
+                  variant="glass"
                   size="sm"
                   className={`flex items-center justify-start gap-2 ${
-                    lang.code === language ? 'bg-primary/10 text-primary' : ''
+                    lang.code === language ? 'bg-primary/10 text-primary border-primary/30' : ''
                   }`}
                   onClick={() => {
                     setLanguage(lang.code);
                     setMobileMenuOpen(false);
                   }}
                 >
-                  <span>{lang.flag}</span>
+                  <motion.span whileHover={{ scale: 1.2 }}>{lang.flag}</motion.span>
                   <span>{lang.name}</span>
                 </Button>
               ))}

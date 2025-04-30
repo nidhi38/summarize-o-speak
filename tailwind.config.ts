@@ -126,6 +126,39 @@ export default {
 					'0%, 100%': { transform: 'translateY(0)' },
 					'50%': { transform: 'translateY(-5px)' },
 				},
+				'wiggle': {
+					'0%, 100%': { transform: 'rotate(0deg)' },
+					'25%': { transform: 'rotate(5deg)' },
+					'75%': { transform: 'rotate(-5deg)' },
+				},
+				'blob': {
+					'0%, 100%': { borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%' },
+					'25%': { borderRadius: '30% 60% 70% 40% / 50% 60% 30% 60%' },
+					'50%': { borderRadius: '50% 60% 30% 60% / 30% 60% 70% 40%' },
+					'75%': { borderRadius: '60% 40% 60% 30% / 30% 40% 70% 60%' },
+				},
+				'blob-spin': {
+					'0%': { transform: 'rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg)' },
+				},
+				'text-gradient': {
+					'0%': { backgroundPosition: '0% 50%' },
+					'100%': { backgroundPosition: '100% 50%' },
+				},
+				'ripple': {
+					'0%': { transform: 'scale(0)', opacity: '1' },
+					'100%': { transform: 'scale(6)', opacity: '0' },
+				},
+				'ping-slow': {
+					'75%, 100%': {
+						transform: 'scale(1.5)',
+						opacity: '0',
+					},
+				},
+				'blink': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.2' },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -141,6 +174,13 @@ export default {
 				'sparkle': 'sparkle 1.5s infinite ease-in-out',
 				'spin-slow': 'spin-slow 8s linear infinite',
 				'bounce-subtle': 'bounce-subtle 2s infinite ease-in-out',
+				'wiggle': 'wiggle 1s ease-in-out infinite',
+				'blob': 'blob 8s infinite',
+				'blob-spin': 'blob-spin 20s linear infinite',
+				'text-gradient': 'text-gradient 1.5s linear infinite',
+				'ripple': 'ripple 1s ease-out',
+				'ping-slow': 'ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+				'blink': 'blink 1.5s infinite',
 			},
 			backdropFilter: {
 				'none': 'none',
@@ -152,7 +192,10 @@ export default {
 				'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
 				'elevated': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
 				'glow': '0 0 15px rgba(139, 92, 246, 0.5)',
+				'glow-lg': '0 0 30px rgba(139, 92, 246, 0.5)',
 				'intense': '0 20px 50px -15px rgba(0, 0, 0, 0.25)',
+				'3d': '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+				'inner-glow': 'inset 0 0 15px rgba(139, 92, 246, 0.4)',
 			},
 		}
 	},
